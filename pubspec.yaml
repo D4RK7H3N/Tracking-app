@@ -1,0 +1,29 @@
+name: sagay_tourist_navigator
+description: "Offline-first tourist navigator for Sagay City, Negros Occidental, Philippines. Shows GPS location, road distance, estimated tricycle fare, and the colour-coded terminal serving each destination."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_map: ^8.3.2
+  geolocator: ^14.1.2
+  http: ^1.6.0
+  latlong2: ^0.10.1
+  provider: ^6.1.5+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # All city data (terminals, destinations, fare rules) is bundled as an
+  # asset. There is no backend; replace this file to update the app.
+  assets:
+    - assets/data/sagay_data.json
