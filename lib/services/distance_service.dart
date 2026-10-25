@@ -7,7 +7,11 @@ import 'package:latlong2/latlong.dart';
 
 /// The distance to a destination plus how it was obtained.
 class DistanceResult {
-  const DistanceResult({required this.km, required this.isRoadRoute});
+  const DistanceResult({
+    required this.km,
+    required this.isRoadRoute,
+    this.routePoints = const [],
+  });
 
   /// Travel distance in kilometres.
   final double km;
@@ -16,6 +20,10 @@ class DistanceResult {
   /// false -> straight-line distance x road_factor (offline estimate).
   /// The UI shows an "Estimated (offline)" label when this is false.
   final bool isRoadRoute;
+
+  /// Waypoints of the actual road route (user -> destination), used to draw
+  /// the route line on the map. Empty for the offline straight-line fallback.
+  final List<LatLng> routePoints;
 }
 
 /// Computes the travel distance between two points.
@@ -51,9 +59,13 @@ class DistanceService {
     required LatLng to,
     required double roadFactor,
   }) async {
-    final roadKm = await _fetchRoadDistanceKm(from, to);
-    if (roadKm != null && roadKm > 0) {
-      return DistanceResult(km: roadKm, isRoadRoute: true);
+    final road = await _fetchRoadRoute(from, to);
+    if (road != null && road.km > 0) {
+      return DistanceResult(
+        km: road.km,
+        isRoadRoute: true,
+        routePoints: road.points,
+      );
     }
     return DistanceResult(
       km: haversineKm(from, to) * roadFactor,
@@ -61,18 +73,20 @@ class DistanceService {
     );
   }
 
-  /// Fetches the driving distance from the OSRM API, or null on any failure.
-  Future<double?> _fetchRoadDistanceKm(LatLng from, LatLng to) async {
+  /// Fetches the driving route from the OSRM API, or null on any failure.
+  Future<_RoadRoute?> _fetchRoadRoute(LatLng from, LatLng to) async {
     try {
-      // OSRM expects "{lng},{lat};{lng},{lat}".
+      // OSRM expects "{lng},{lat};{lng},{lat}". overview=simplified returns a
+      // light geometry we can draw as the route line on the map.
       final path =
           '${from.longitude},${from.latitude};${to.longitude},${to.latitude}';
-      final uri = Uri.parse('$baseUrl/$path?overview=false');
+      final uri =
+          Uri.parse('$baseUrl/$path?overview=simplified&geometries=geojson');
       final response = await _client.get(uri).timeout(requestTimeout);
       if (response.statusCode != 200) {
         return null;
       }
-      return _parseRoadDistanceKm(response.body);
+      return _parseRoadRoute(response.body);
     } catch (_) {
       // Network error, timeout or malformed response -> caller falls back
       // to the offline estimate.
@@ -80,9 +94,10 @@ class DistanceService {
     }
   }
 
-  /// Extracts `routes[0].distance` (metres) from an OSRM response body and
-  /// converts it to kilometres. Returns null when the response is unusable.
-  double? _parseRoadDistanceKm(String body) {
+  /// Extracts the distance (metres -> km) and the route geometry
+  /// (`routes[0].geometry.coordinates`, [lng, lat] pairs) from an OSRM
+  /// response body. Returns null when the response is unusable.
+  _RoadRoute? _parseRoadRoute(String body) {
     try {
       final dynamic data = jsonDecode(body);
       if (data is! Map<String, dynamic>) {
@@ -100,7 +115,23 @@ class DistanceService {
         return null;
       }
       final metres = (first['distance'] as num?)?.toDouble();
-      return metres == null ? null : metres / 1000.0;
+      if (metres == null) {
+        return null;
+      }
+
+      final points = <LatLng>[];
+      final geometry = first['geometry'];
+      if (geometry is Map<String, dynamic>) {
+        final coordinates = geometry['coordinates'];
+        if (coordinates is List) {
+          for (final c in coordinates) {
+            if (c is List && c.length >= 2 && c[0] is num && c[1] is num) {
+              points.add(LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()));
+            }
+          }
+        }
+      }
+      return _RoadRoute(km: metres / 1000.0, points: points);
     } catch (_) {
       return null;
     }
@@ -123,5 +154,25 @@ class DistanceService {
     return 2 * earthRadiusKm * math.asin(math.sqrt(h));
   }
 
+  /// Initial bearing (degrees, 0-360; 0 = due north, 90 = east) from [a]
+  /// to [b]. Used to rotate the direction arrow on the user's marker.
+  static double bearingDeg(LatLng a, LatLng b) {
+    final double lat1 = _degToRad(a.latitude);
+    final double lat2 = _degToRad(b.latitude);
+    final double dLon = _degToRad(b.longitude - a.longitude);
+    final double y = math.sin(dLon) * math.cos(lat2);
+    final double x = math.cos(lat1) * math.sin(lat2) -
+        math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+    return (math.atan2(y, x) * 180.0 / math.pi + 360.0) % 360.0;
+  }
+
   static double _degToRad(double degrees) => degrees * math.pi / 180.0;
+}
+
+/// Internal holder for one OSRM route: distance plus its polyline geometry.
+class _RoadRoute {
+  const _RoadRoute({required this.km, required this.points});
+
+  final double km;
+  final List<LatLng> points;
 }

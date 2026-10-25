@@ -8,6 +8,7 @@ import '../models/app_data.dart';
 import '../models/destination.dart';
 import '../services/location_service.dart' show LocationStatus;
 import '../state/app_state.dart';
+import '../widgets/compass_indicator.dart';
 import 'result_screen.dart';
 
 /// Home screen: a full-screen map with the user's position and destination
@@ -197,6 +198,13 @@ class _MapWithSheetState extends State<_MapWithSheet> {
             ),
             MarkerLayer(markers: _buildMarkers(position)),
           ],
+        ),
+
+        // Compass indicator: the map is locked north-up.
+        const Positioned(
+          top: 12,
+          left: 12,
+          child: CompassIndicator(size: 42),
         ),
 
         // Locate-me button, top right, away from the sheet.

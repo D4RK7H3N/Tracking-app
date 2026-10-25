@@ -1,0 +1,9 @@
+# flutter_launcher_icons configuration.
+# Regenerate all launcher icons after changing the source art with:
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/icon/icon.png"
+  android: true
+  min_sdk_android: 23
+  adaptive_icon_background: "#004D40"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart' show Position;
@@ -7,9 +9,11 @@ import 'package:provider/provider.dart';
 import '../models/destination.dart';
 import '../models/fare_rule.dart' show Discount;
 import '../models/terminal.dart';
+import '../services/distance_service.dart' show DistanceService;
 import '../services/fare_service.dart';
 import '../state/app_state.dart';
 import '../widgets/color_chip.dart';
+import '../widgets/compass_indicator.dart';
 import '../widgets/result_card.dart';
 
 const FareService _fareService = FareService();
@@ -389,11 +393,22 @@ class _MiniMap extends StatelessWidget {
       ?userPoint,
     ];
 
+    // Route line: real road geometry from the routing API when available,
+    // straight line otherwise.
+    final routeFromApi =
+        appState.distanceResult?.routePoints ?? const <LatLng>[];
+    final polylinePoints = routeFromApi.isNotEmpty
+        ? routeFromApi
+        : <LatLng>[?userPoint, destPoint];
+
+    // Fit the camera around markers AND the full route line.
+    final fitPoints = <LatLng>{...points, ...polylinePoints}.toList();
+
     final MapOptions options;
-    if (points.length >= 2) {
+    if (fitPoints.length >= 2) {
       options = MapOptions(
         initialCameraFit: CameraFit.bounds(
-          bounds: LatLngBounds.fromPoints(points),
+          bounds: LatLngBounds.fromPoints(fitPoints),
           padding: const EdgeInsets.all(40),
         ),
       );
@@ -403,9 +418,11 @@ class _MiniMap extends StatelessWidget {
 
     final terminalColor = terminal?.uiColor ?? Colors.grey;
 
-    return FlutterMap(
-      options: options,
+    return Stack(
       children: [
+        FlutterMap(
+          options: options,
+          children: [
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'ph.sagay.sagay_tourist_navigator',
@@ -414,7 +431,9 @@ class _MiniMap extends StatelessWidget {
           PolylineLayer(
             polylines: [
               Polyline(
-                points: [userPoint, destPoint],
+                // Follow the actual road route when we have one (online);
+                // otherwise fall back to a straight user -> destination line.
+                points: polylinePoints,
                 strokeWidth: 4,
                 color: Colors.blue,
               ),
@@ -427,10 +446,18 @@ class _MiniMap extends StatelessWidget {
                 point: userPoint,
                 width: 34,
                 height: 34,
-                child: const Icon(
-                  Icons.my_location,
-                  color: Color(0xFF1565C0),
-                  size: 30,
+                child: Transform.rotate(
+                  // Point the arrow towards the destination (map is
+                  // north-up, so rotate by the geographic bearing).
+                  angle: DistanceService.bearingDeg(userPoint, destPoint) *
+                      math.pi /
+                      180.0,
+                  child: const Icon(
+                    Icons.navigation,
+                    color: Color(0xFF1565C0),
+                    size: 32,
+                    shadows: [Shadow(color: Colors.black38, blurRadius: 4)],
+                  ),
                 ),
               ),
             Marker(
@@ -459,6 +486,14 @@ class _MiniMap extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+          ],
+        ),
+        // North indicator (the map is locked north-up).
+        const Positioned(
+          top: 8,
+          left: 8,
+          child: CompassIndicator(size: 36),
         ),
       ],
     );

@@ -39,6 +39,32 @@ void main() {
     });
   });
 
+  group('DistanceService.bearingDeg', () {
+    test('due north is 0 degrees', () {
+      const a = LatLng(10.90, 123.42);
+      const b = LatLng(10.91, 123.42);
+      expect(DistanceService.bearingDeg(a, b), closeTo(0, 1));
+    });
+
+    test('due east is 90 degrees', () {
+      const a = LatLng(10.90, 123.42);
+      const b = LatLng(10.90, 123.43);
+      expect(DistanceService.bearingDeg(a, b), closeTo(90, 1));
+    });
+
+    test('due south is 180 degrees', () {
+      const a = LatLng(10.91, 123.42);
+      const b = LatLng(10.90, 123.42);
+      expect(DistanceService.bearingDeg(a, b), closeTo(180, 1));
+    });
+
+    test('due west is 270 degrees', () {
+      const a = LatLng(10.90, 123.43);
+      const b = LatLng(10.90, 123.42);
+      expect(DistanceService.bearingDeg(a, b), closeTo(270, 1));
+    });
+  });
+
   group('DistanceResult', () {
     test('road-route flag is preserved', () {
       const road = DistanceResult(km: 5.2, isRoadRoute: true);

@@ -7,7 +7,8 @@ plugins {
 android {
     namespace = "ph.sagay.sagay_tourist_navigator"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // No NDK pin: this app has no native C/C++ code, so AGP only fetches an
+    // NDK if a module actually needs one.
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -19,7 +20,7 @@ android {
         applicationId = "ph.sagay.sagay_tourist_navigator"
         // geolocator (GPS) and flutter_map require a reasonably modern Android
         // version. 23 (Android 6.0) covers effectively all devices in use.
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

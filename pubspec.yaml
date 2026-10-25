@@ -19,6 +19,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
@@ -27,3 +28,4 @@ flutter:
   # asset. There is no backend; replace this file to update the app.
   assets:
     - assets/data/sagay_data.json
+
