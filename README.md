@@ -22,18 +22,26 @@ An **offline-first, backend-free** Android app that helps tourists get around
 Out of scope by design: booking, payments, real-time tricycle tracking, user
 accounts, turn-by-turn voice navigation.
 
-## ⚠️ ALL DATA VALUES ARE PLACEHOLDERS
+## ⚠️ DATA STATUS: RESEARCHED FROM PUBLIC SOURCES — VERIFY LOCALLY
 
-Every fare amount, terminal, colour assignment, area list, destination name
-and coordinate in `assets/data/sagay_data.json` is a **clearly fake
-placeholder** used for development. Replace them with:
+The bundled data (v2) was researched from public sources:
 
-- the **official city fare matrix** (base fare, step size, extra per step,
-  discounts), and
-- **surveyed coordinates** for the real tricycle terminals, their official
-  colour codes, and the destinations they serve.
+- **Destinations & coordinates**: PhilAtlas (barangay centres), OpenStreetMap /
+  Nominatim nodes (Carbin Reef, Suyac Island, Museo sang Bata sa Negros,
+  Sagay Public Plaza), Wikipedia (city centre). Offshore approximations:
+  Margaha Beach, San Vicente Ferrer Parish (Vito), Lapus Lapus (Bulanon).
+- **Fare rule**: City of Sagay temporary fare order (EO 2026-117 as announced
+  by the City Government / PULS Sagay, 2026): base **₱15** for the first
+  **3 km**, **+₱2 per km** beyond, **20%** mandatory discount for senior
+  citizens, students, and PWDs.
+- **Terminals & colours**: reasonable structure based on the poblacion,
+  Vito Government Center, and Old Sagay Port — **the colour assignments and
+  exact terminal locations MUST be verified with the Sagay City Tourism
+  Office / LTFRB-franchised operators before release.**
 
-See "Replacing the data" below.
+The fare rule may change when the city lifts the "temporary" order — replace
+`fare_rule` in `assets/data/sagay_data.json` when the official matrix is
+published.
 
 ## Project structure
 

@@ -14,7 +14,7 @@ void main() {
   });
 
   test('asset parses with the expected top-level sections', () {
-    expect(data.version, 1);
+    expect(data.version, greaterThanOrEqualTo(1));
     expect(data.terminals, isNotEmpty);
     expect(data.destinations, isNotEmpty);
   });

@@ -197,6 +197,12 @@ class _DistanceSection extends StatelessWidget {
       return const Text('—');
     }
 
+    // For sea destinations the km value covers only the road leg to the
+    // boat terminal — say so explicitly.
+    final selected = appState.selectedDestination;
+    final boatTerminalName =
+        selected == null ? null : appState.data?.terminalForDestination(selected)?.name;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -214,6 +220,15 @@ class _DistanceSection extends StatelessWidget {
           ],
         ),
         if (!result.isRoadRoute) const _OfflineLabel(),
+        if (selected?.boat == true)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'Tricycle to ${boatTerminalName ?? "the boat terminal"}, then a '
+              'boat ride to ${selected!.name}.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
       ],
     );
   }
@@ -397,9 +412,15 @@ class _MiniMap extends StatelessWidget {
     // straight line otherwise.
     final routeFromApi =
         appState.distanceResult?.routePoints ?? const <LatLng>[];
+    // Offline fallback: straight line to the boat terminal (sea spots) or
+    // to the destination itself.
+    final fallbackTarget = terminalPoint ?? destPoint;
     final polylinePoints = routeFromApi.isNotEmpty
         ? routeFromApi
-        : <LatLng>[?userPoint, destPoint];
+        : <LatLng>[?userPoint, fallbackTarget];
+
+    // Sea destinations: dashed line for the boat leg (terminal -> spot).
+    final boatLeg = destination.boat && terminalPoint != null;
 
     // Fit the camera around markers AND the full route line.
     final fitPoints = <LatLng>{...points, ...polylinePoints}.toList();
@@ -432,11 +453,20 @@ class _MiniMap extends StatelessWidget {
             polylines: [
               Polyline(
                 // Follow the actual road route when we have one (online);
-                // otherwise fall back to a straight user -> destination line.
+                // otherwise fall back to a straight line.
                 points: polylinePoints,
                 strokeWidth: 4,
                 color: Colors.blue,
               ),
+              // Boat leg over the sea, drawn dashed so it is never mistaken
+              // for a road.
+              if (boatLeg)
+                Polyline(
+                  points: [terminalPoint, destPoint],
+                  strokeWidth: 4,
+                  color: const Color(0xFF00838F),
+                  pattern: StrokePattern.dashed(segments: [6, 6]),
+                ),
             ],
           ),
         MarkerLayer(

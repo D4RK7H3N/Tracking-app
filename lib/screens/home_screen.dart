@@ -246,7 +246,11 @@ class _MapWithSheetState extends State<_MapWithSheet> {
                   ),
                 ],
               ),
-              child: Column(
+              // Material gives the ListTiles an ink-rendering surface
+              // (prevents the "ink splashes may be invisible" exception).
+              child: Material(
+                color: Theme.of(context).colorScheme.surface,
+                child: Column(
                 children: [
                   // Drag handle.
                   Container(
@@ -305,6 +309,7 @@ class _MapWithSheetState extends State<_MapWithSheet> {
                           ),
                   ),
                 ],
+                ),
               ),
             );
           },

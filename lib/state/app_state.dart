@@ -123,20 +123,41 @@ class AppState extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    // Tag this request so a slow response for an OLD selection can never
+    // overwrite the route of a NEWLY selected destination.
+    final requestId = ++_distanceRequestId;
     distanceState = DistanceLoadState.loading;
     distanceError = null;
     notifyListeners();
 
+    // Sea destinations: OSRM's road graph has no roads on water, so routing
+    // straight to a reef/island snaps the endpoint to a random coastal road
+    // (the "line pointing to the wrong barangay" bug). The tricycle leg must
+    // instead end at the boat terminal; the sea leg is drawn separately.
+    final terminal = _data?.terminalForDestination(destination);
+    final roadTarget = (destination.boat && terminal != null)
+        ? LatLng(terminal.lat, terminal.lng)
+        : LatLng(destination.lat, destination.lng);
+
     final roadFactor = _data?.fareRule.roadFactor ?? 1.25;
     final result = await _distanceService.getDistanceKm(
       from: LatLng(position.latitude, position.longitude),
-      to: LatLng(destination.lat, destination.lng),
+      to: roadTarget,
       roadFactor: roadFactor,
     );
+
+    // A newer selection happened while we were waiting -> ignore this result.
+    if (requestId != _distanceRequestId ||
+        selectedDestination?.id != destination.id) {
+      return;
+    }
     distanceResult = result;
     distanceState = DistanceLoadState.done;
     notifyListeners();
   }
+
+  /// Monotonic counter used to discard stale distance responses.
+  int _distanceRequestId = 0;
 
   /// Retry entry point for the result screen's retry button.
   void retryDistance() => loadDistance();

@@ -7,6 +7,7 @@ class Destination {
     required this.lat,
     required this.lng,
     required this.terminalId,
+    this.boat = false,
   });
 
   factory Destination.fromJson(Map<String, dynamic> json) => Destination(
@@ -16,6 +17,9 @@ class Destination {
         lat: (json['lat'] as num?)?.toDouble() ?? 0,
         lng: (json['lng'] as num?)?.toDouble() ?? 0,
         terminalId: json['terminal_id'] as String? ?? '',
+        // Sea destinations (reefs, islands) are reached by boat from their
+        // terminal port; the tricycle only covers the road leg to the port.
+        boat: json['boat'] == true,
       );
 
   final String id;
@@ -29,4 +33,7 @@ class Destination {
 
   /// Id of the [Terminal] whose tricycles serve this destination.
   final String terminalId;
+
+  /// true when the final leg requires a boat ride from the terminal port.
+  final bool boat;
 }
