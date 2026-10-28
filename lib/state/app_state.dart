@@ -50,6 +50,11 @@ class AppState extends ChangeNotifier {
   // ---- location ----
   LocationState location = const LocationState();
 
+  /// The most recent in-flight [locateMe] attempt, awaited by
+  /// [loadDistance] so a destination opened during GPS startup waits for
+  /// the fix instead of failing immediately.
+  Future<void>? _pendingLocate;
+
   // ---- selected destination + its distance ----
   Destination? selectedDestination;
   DistanceLoadState distanceState = DistanceLoadState.idle;
@@ -74,6 +79,12 @@ class AppState extends ChangeNotifier {
   Future<void> locateMe() async {
     location = const LocationState(status: LocationStatus.loading);
     notifyListeners();
+    final pending = _runLocate();
+    _pendingLocate = pending;
+    await pending;
+  }
+
+  Future<void> _runLocate() async {
     final outcome = await _locationService.getCurrentLocation();
     location = LocationState(
       status: outcome.status,
@@ -112,8 +123,16 @@ class AppState extends ChangeNotifier {
     if (destination == null) {
       return;
     }
-    final position = location.position;
-    if (position == null) {
+    if (location.position == null) {
+      // A fix may still be in flight right after app start; wait for it
+      // rather than failing instantly with "GPS needed".
+      final pending = _pendingLocate;
+      if (pending != null) {
+        await pending;
+      }
+    }
+    final resolved = location.position;
+    if (resolved == null) {
       // No GPS: browsing still works, but distance and fare cannot be shown.
       distanceState = DistanceLoadState.error;
       distanceResult = null;
@@ -141,7 +160,7 @@ class AppState extends ChangeNotifier {
 
     final roadFactor = _data?.fareRule.roadFactor ?? 1.25;
     final result = await _distanceService.getDistanceKm(
-      from: LatLng(position.latitude, position.longitude),
+      from: LatLng(resolved.latitude, resolved.longitude),
       to: roadTarget,
       roadFactor: roadFactor,
     );

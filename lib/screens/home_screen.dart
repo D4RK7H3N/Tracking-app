@@ -22,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   AppState? _appState;
+  bool _dataErrorShown = false;
 
   @override
   void initState() {
@@ -49,9 +50,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     final appState = context.read<AppState>();
     if (appState.dataError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(appState.dataError!)),
-      );
+      if (!_dataErrorShown) {
+        _dataErrorShown = true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(appState.dataError!)),
+        );
+      }
+    } else {
+      _dataErrorShown = false;
     }
   }
 

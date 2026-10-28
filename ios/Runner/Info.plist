@@ -24,6 +24,8 @@
 		<string>????</string>
 		<key>CFBundleVersion</key>
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Your location is used to measure travel distance and estimate tricycle fares to destinations in Sagay City.</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
 		<key>UIApplicationSceneManifest</key>
