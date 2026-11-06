@@ -1,0 +1,14 @@
+# Template for gradle.properties (which is gitignored).
+# Copy this file to gradle.properties and adjust for your machine.
+
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+kotlin.code.style=official
+
+# Machine-local JDK used to run Gradle. Gradle 8.10.2 needs JDK 17-21;
+# point this at Android Studio's bundled JBR (or your own JDK 21).
+# org.gradle.java.home=C:/Program Files/Android/Android Studio/jbr
+
+# No API keys are needed: maps are OpenStreetMap via osmdroid and routing is
+# the OSRM public server (see di/NetworkModule.kt to swap providers).

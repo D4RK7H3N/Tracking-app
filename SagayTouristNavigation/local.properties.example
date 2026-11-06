@@ -1,0 +1,7 @@
+# Template for local.properties (which is gitignored and holds the public token).
+# Copy this file to local.properties and fill in the token.
+# Android Studio normally generates local.properties with sdk.dir on first open;
+# just add the MAPBOX_PUBLIC_TOKEN line to it.
+
+MAPBOX_PUBLIC_TOKEN=pk.YOUR_PUBLIC_TOKEN_HERE
+# sdk.dir=C\:\\Users\\you\\AppData\\Local\\Android\\Sdk
