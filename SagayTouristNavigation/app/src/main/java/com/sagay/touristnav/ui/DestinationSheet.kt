@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -59,7 +60,7 @@ fun DestinationSheet(
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight(0.42f),
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp,
     ) {
@@ -73,6 +74,13 @@ fun DestinationSheet(
                 singleLine = true,
                 placeholder = { Text("Search a destination or category…") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = SagayColors.TealPrimary,
+                    unfocusedBorderColor = SagayColors.Hairline,
+                ),
             )
             if (filtered.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

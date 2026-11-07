@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -49,9 +50,6 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 
 private const val TAP_THRESHOLD_KM = 0.3
-private val USER_COLOR = 0xFF1565C0.toInt()
-private val ROUTE_COLOR = 0xFF1976D2.toInt()
-private val SELECTED_STROKE = 0xFFF57F17.toInt()
 private val USER_RADIUS_DP = 20f
 private val UNSELECTED_RADIUS_DP = 18f
 private val SELECTED_RADIUS_DP = 26f
@@ -263,9 +261,12 @@ private fun TripMap(
         FloatingActionButton(
             onClick = onLocateMe,
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(end = 16.dp, bottom = 16.dp),
+                .align(Alignment.TopEnd)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(top = 16.dp, end = 16.dp),
+            containerColor = SagayColors.SunriseDeep,
+            contentColor = androidx.compose.ui.graphics.Color.White,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_my_location),
@@ -307,7 +308,7 @@ private fun userMarker(
     Marker(mapView).apply {
         position = GeoPoint(lat, lng)
         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        icon = circleIcon(context, USER_COLOR, USER_RADIUS_DP)
+        icon = circleIcon(context, SagayColors.UserBlue.toArgb(), USER_RADIUS_DP)
         title = "You are here"
     }
 
@@ -325,7 +326,7 @@ private fun destinationMarker(
             context = context,
             color = color,
             sizeDp = if (isSelected) SELECTED_RADIUS_DP else UNSELECTED_RADIUS_DP,
-            strokeColor = if (isSelected) SELECTED_STROKE else android.graphics.Color.WHITE,
+            strokeColor = if (isSelected) SagayColors.SunriseDeep.toArgb() else android.graphics.Color.WHITE,
         )
         title = destination.name
     }
@@ -333,7 +334,7 @@ private fun destinationMarker(
 private fun routePolyline(points: List<RoutePoint>): Polyline =
     Polyline().apply {
         setPoints(points.map { GeoPoint(it.lat, it.lng) })
-        outlinePaint.color = ROUTE_COLOR
+        outlinePaint.color = SagayColors.RouteBlue.toArgb()
         outlinePaint.strokeWidth = 10f
     }
 
