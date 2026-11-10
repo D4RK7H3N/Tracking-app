@@ -7,6 +7,59 @@ An **offline-first, backend-free** Android app that helps tourists get around
 - **No server, no database, no login** — all city data ships inside the app as
   a JSON asset (`assets/data/sagay_data.json`).
 
+> **Two implementations live in this repo.** The shipping app is the **native
+> Android** build in [`SagayTouristNavigation/`](SagayTouristNavigation/)
+> (Kotlin + Jetpack Compose). The sections further below document the original
+> **Flutter** prototype in [`lib/`](lib/).
+
+## Screenshots — native Android app
+
+Captured on a physical Android device running the v1.0.0 debug build:
+
+| Destination search | Route & fare estimate |
+| :---: | :---: |
+| ![Searchable destination list over the map](docs/screenshots/01-map.png) | ![Road route with distance, duration and fare](docs/screenshots/02-route-result.png) |
+
+The result survives rotation (landscape):
+
+![Route result preserved in landscape](docs/screenshots/03-rotated.png)
+
+## Native Android app — v1.0.0
+
+The current implementation: Kotlin + Jetpack Compose, MVVM with `StateFlow`,
+Hilt dependency injection, Room (SQLite) persistence, osmdroid maps, OSRM road
+routing, and Google fused location. Offline-capable — bundled seed data ships
+in the APK and pending trips are saved and resume when connectivity returns.
+
+**Highlights**
+
+- **38 searchable destinations** (tourist spots + 21 DepEd schools) across
+  **3 colour-coded terminals**; island/reef entries route to their boat port.
+- **Road distance + duration** from OSRM, with a straight-line offline fallback.
+- **Fare estimate:** ₱15 for the first 3 km, +₱2 per started km beyond, capped
+  at **₱20** (Sagay City Resolution No. 2026-117 working rule).
+- **Branded adaptive launcher icon** and the calm-teal "Sunrise Route" theme.
+- **Map zoom controls** and a responsive **Locate Me** button.
+- **Rotation-safe state** and saved trips that survive app updates
+  (Room migration 2→3).
+
+**Build & test** (JDK 17; minSdk 28 / Android 9, targetSdk 35):
+
+```bash
+cd SagayTouristNavigation
+./gradlew :app:testDebugUnitTest :app:assembleDebug
+# APK: app/build/outputs/apk/debug/Sagay-Tourist-Navigator-debug.apk
+```
+
+See [`SagayTouristNavigation/README.md`](SagayTouristNavigation/README.md) for
+the architecture and data-replacement guide, and
+[`SagayTouristNavigation/RELEASE_NOTES.md`](SagayTouristNavigation/RELEASE_NOTES.md)
+for the full v1.0.0 changelog.
+
+---
+
+*The sections below describe the original Flutter prototype (`lib/`).*
+
 ## What it does
 
 1. Shows your current GPS location on an OpenStreetMap map (no API key).
