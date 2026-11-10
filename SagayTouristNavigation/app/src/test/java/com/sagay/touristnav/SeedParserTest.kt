@@ -19,8 +19,16 @@ class SeedParserTest {
     fun `parses the expected row counts`() {
         val file = SeedParser.parse(seed)
         assertEquals(3, file.terminals.size)
-        assertEquals(17, file.destinations.size)
+        assertEquals(38, file.destinations.size)
         assertTrue(file.fareRule != null)
+    }
+
+    @Test
+    fun `schools are included as destinations`() {
+        val file = SeedParser.parse(seed)
+        val schools = file.destinations.filter { it.category == "School" }
+        assertTrue("expected Sagay National High School in seed", schools.any { it.name == "Sagay National High School" })
+        assertEquals(21, schools.size)
     }
 
     @Test
@@ -36,17 +44,18 @@ class SeedParserTest {
     }
 
     @Test
-    fun `five island destinations are flagged for boat routing`() {
+    fun `island destinations are flagged for boat routing`() {
         val file = SeedParser.parse(seed)
-        assertEquals(5, file.destinations.count { it.boat })
+        assertEquals(8, file.destinations.count { it.boat })
     }
 
     @Test
-    fun `fare rule matches the city fare order`() {
+    fun `fare rule matches the city fare order with the 20 peso cap`() {
         val rule = SeedParser.parse(seed).fareRule!!
         assertEquals(15.0, rule.baseFare, 0.001)
         assertEquals(3.0, rule.baseKm, 0.001)
         assertEquals(2.0, rule.extraPerKm, 0.001)
+        assertEquals(20.0, rule.maxFare!!, 0.001)
         assertTrue(rule.source.contains("2026-117"))
     }
 

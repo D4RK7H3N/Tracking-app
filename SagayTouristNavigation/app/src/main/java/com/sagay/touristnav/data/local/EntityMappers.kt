@@ -30,4 +30,5 @@ fun FareRuleEntity.toDomain(): FareRule = FareRule(
     baseKm = baseKm,
     extraPerKm = extraPerKm,
     source = source,
+    maxFare = maxFare,
 )

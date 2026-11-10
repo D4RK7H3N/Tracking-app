@@ -2,13 +2,14 @@ package com.sagay.touristnav.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.sagay.touristnav.data.local.TripStateEntity
 
 @Dao
 interface TripStateDao {
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(state: TripStateEntity): Long
 
     @Query(

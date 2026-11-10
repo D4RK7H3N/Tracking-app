@@ -49,7 +49,14 @@ class TripRepository @Inject constructor(
 
     suspend fun fareRule(): FareRule =
         fareRuleDao.getFirst()?.toDomain()
-            ?: FareRule(id = 0, baseFare = 15.0, baseKm = 3.0, extraPerKm = 2.0, source = "fallback")
+            ?: FareRule(
+                id = 0,
+                baseFare = 15.0,
+                baseKm = 3.0,
+                extraPerKm = 2.0,
+                source = "fallback",
+                maxFare = 20.0,
+            )
 
     /**
      * Road route to a land endpoint. Island/reef destinations route to the
@@ -96,16 +103,20 @@ class TripRepository @Inject constructor(
         )
     }
 
-    suspend fun savePendingTrip(origin: LocationFix, destinationId: String): Long =
-        tripStateDao.insert(
-            TripStateEntity(
-                originLat = origin.lat,
-                originLng = origin.lng,
-                destinationId = destinationId,
-                status = TripStateEntity.STATUS_PENDING_ROUTE,
-                savedAt = System.currentTimeMillis(),
-            ),
-        )
+    suspend fun savePendingTrip(
+        origin: LocationFix,
+        destinationId: String,
+        tripId: Long? = null,
+    ): Long = tripStateDao.insert(
+        TripStateEntity(
+            id = tripId ?: 0,
+            originLat = origin.lat,
+            originLng = origin.lng,
+            destinationId = destinationId,
+            status = TripStateEntity.STATUS_PENDING_ROUTE,
+            savedAt = System.currentTimeMillis(),
+        ),
+    )
 
     suspend fun pendingTrip(): TripStateEntity? = tripStateDao.getLatestPending()
 

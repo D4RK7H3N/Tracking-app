@@ -50,6 +50,29 @@ class FareCalculatorTest {
         assertEquals(33.0, FareCalculator.compute(rule, 12.0), 0.001)
     }
 
+    private val cappedRule = rule.copy(maxFare = 20.0)
+
+    @Test
+    fun `capped rule keeps fares within the base fare at short distances`() {
+        assertEquals(15.0, FareCalculator.compute(cappedRule, 3.0), 0.001)
+        assertEquals(17.0, FareCalculator.compute(cappedRule, 4.0), 0.001)
+        assertEquals(19.0, FareCalculator.compute(cappedRule, 5.0), 0.001)
+    }
+
+    @Test
+    fun `capped rule stops at the 20 peso ceiling`() {
+        // raw 6.0 km = 15 + 3*2 = 21 -> clamped to 20
+        assertEquals(20.0, FareCalculator.compute(cappedRule, 6.0), 0.001)
+        // raw 30.9 km = 15 + 28*2 = 71 -> clamped to 20
+        assertEquals(20.0, FareCalculator.compute(cappedRule, 30.9), 0.001)
+    }
+
+    @Test
+    fun `capped rule clamps the first step past 19 pesos`() {
+        // raw 5.5 km = 15 + ceil(2.5)*2 = 21 -> clamped to 20
+        assertEquals(20.0, FareCalculator.compute(cappedRule, 5.5), 0.001)
+    }
+
     @Test
     fun `zero km charges only the base fare`() {
         assertEquals(15.0, FareCalculator.compute(rule, 0.0), 0.001)

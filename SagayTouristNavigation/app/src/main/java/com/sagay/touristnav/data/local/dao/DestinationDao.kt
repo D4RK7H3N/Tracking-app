@@ -2,13 +2,14 @@ package com.sagay.touristnav.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.sagay.touristnav.data.local.DestinationEntity
 
 @Dao
 interface DestinationDao {
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(destinations: List<DestinationEntity>)
 
     @Query("SELECT * FROM destination ORDER BY name")

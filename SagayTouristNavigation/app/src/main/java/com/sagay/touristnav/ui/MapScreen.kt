@@ -10,6 +10,8 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
@@ -20,6 +22,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -203,6 +209,14 @@ private fun TripMap(
 
     var lastCameraKey by remember { mutableStateOf("") }
     val cameraKey = "${selected?.id ?: "-"}|${routePoints.size}|${position.lat},${position.lng}"
+    var locateRequest by remember { mutableStateOf(0) }
+
+    LaunchedEffect(locateRequest, position.lat, position.lng) {
+        if (locateRequest > 0) {
+            mapView.controller.setZoom(14.5)
+            mapView.controller.setCenter(GeoPoint(position.lat, position.lng))
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
@@ -259,12 +273,15 @@ private fun TripMap(
             },
         )
         FloatingActionButton(
-            onClick = onLocateMe,
+            onClick = {
+                locateRequest += 1
+                onLocateMe()
+            },
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(top = 16.dp, end = 16.dp),
-            containerColor = SagayColors.SunriseDeep,
+            containerColor = SagayColors.TealPrimary,
             contentColor = androidx.compose.ui.graphics.Color.White,
             shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
         ) {
@@ -273,12 +290,60 @@ private fun TripMap(
                 contentDescription = "Locate me",
             )
         }
+        ZoomControls(
+            onZoomOut = mapView.controller::zoomOut,
+            onZoomIn = mapView.controller::zoomIn,
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 12.dp),
+        )
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .windowInsetsPadding(WindowInsets.navigationBars),
         ) {
             bottomContent()
+        }
+    }
+}
+
+/** Stacked zoom-out / zoom-in buttons on the map's left edge. */
+@Composable
+private fun ZoomControls(
+    onZoomOut: () -> Unit,
+    onZoomIn: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ZoomButton(label = "−", contentDescription = "Zoom out", onClick = onZoomOut)
+        ZoomButton(label = "+", contentDescription = "Zoom in", onClick = onZoomIn)
+    }
+}
+
+@Composable
+private fun ZoomButton(
+    label: String,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.95f),
+        tonalElevation = 2.dp,
+        shadowElevation = 3.dp,
+        modifier = Modifier.size(44.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Text(
+                label,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = SagayColors.TealPrimary,
+            )
         }
     }
 }

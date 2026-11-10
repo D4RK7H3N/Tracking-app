@@ -37,13 +37,15 @@ public (`pk.`) and a secret downloads (`sk.`) token.
 ```
 
 - `FareCalculator` — 0 km, exactly 3 km, 3.1 km, the 4.0 km step boundary,
-  4.01 km, 5 km, and a large 12 km trip.
+  4.01 km, 5 km, a large 12 km trip, and the ₱15–₱20 cap (short trips keep
+  base/step fares, long trips clamp to ₱20).
 - `Haversine` — known Sagay-area distances, zero distance, and the road-vs-
   straight-line warning rule in both directions.
 - `SeedParser` — parses the bundled `seed.json` into 3 terminals and
-  17 destinations, checks that every destination's terminal id resolves,
-  that the 5 island destinations carry the boat flag, the fare values
-  (15 / 3 km / +2), and that colours are valid `#RRGGBB` codes.
+  38 destinations (21 of them schools), checks that every destination's
+  terminal id resolves, that the 8 island destinations carry the boat flag,
+  the fare values (15 / 3 km / +2, max 20), and that colours are valid
+  `#RRGGBB` codes.
 
 ## Building
 
@@ -68,18 +70,22 @@ covers the road leg to the port only.
 1. **Terminal coordinates and colors** — `assets/seed.json` -> `terminals[]`.
    Researched from public sources; verify colours and coordinates with the
    Sagay City Tourism Office / LTFRB-franchised operators.
-2. **Destinations** — `assets/seed.json` -> `destinations[]`. 17 entries;
-   coordinates from PhilAtlas / OSM / Wikipedia. Verify on site.
+2. **Destinations** — `assets/seed.json` -> `destinations[]`. 38 entries
+   (tourist spots + 21 DepEd schools from the OSM/Overpass data and the
+   DepEd Division of Sagay City directory); coordinates from PhilAtlas /
+   OSM / Wikipedia. Verify on site.
 3. **Fare values** — `assets/seed.json` -> `fare_rule`
-   (`baseFare=15`, `baseKm=3`, `extraPerKm=2`, source
+   (`baseFare=15`, `baseKm=3`, `extraPerKm=2`, `maxFare=20`, source
    "Sagay City Resolution No. 2026-117"). This is the city's temporary fare
    order — replace when the official matrix is published.
 4. **Fare rounding rule** — `domain/FareCalculator.kt` uses
-   `ceil(roadKm - baseKm) * extraPerKm` (one step per **started** kilometer).
-   If Resolution No. 2026-117 specifies a different partial-kilometer rule,
+   `ceil(roadKm - baseKm) * extraPerKm` (one step per **started** kilometer),
+   clamped to `maxFare`. If Resolution No. 2026-117 specifies a different
+   partial-kilometer or ceiling rule,
    change that one function and update `FareCalculatorTest`.
-5. After editing `seed.json`: clear app data (or uninstall) so the seed
-   reloads — the loader only seeds an empty database.
+5. After editing `seed.json`: restart the app. Bundled terminals, destinations,
+   and the fare rule are refreshed automatically once per process without
+   deleting saved trip state.
 
 ## Architecture
 

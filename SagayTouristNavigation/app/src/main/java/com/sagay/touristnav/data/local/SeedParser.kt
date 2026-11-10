@@ -56,4 +56,5 @@ data class SeedFareRule(
     val baseKm: Double,
     val extraPerKm: Double,
     val source: String,
+    val maxFare: Double? = null,
 )

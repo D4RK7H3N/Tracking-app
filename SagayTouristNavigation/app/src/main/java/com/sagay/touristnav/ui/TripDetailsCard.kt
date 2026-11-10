@@ -128,7 +128,7 @@ fun TripDetailsCard(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                "Fare basis: ${trip.fareSource} · ₱15 first 3 km, +₱2 per started km",
+                "Fare basis: ${trip.fareSource} · ₱15 first 3 km, +₱2 per started km, max ₱20",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

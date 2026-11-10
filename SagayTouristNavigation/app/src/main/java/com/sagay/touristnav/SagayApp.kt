@@ -20,6 +20,6 @@ class SagayApp : Application() {
     override fun onCreate() {
         super.onCreate()
         Configuration.getInstance().userAgentValue = packageName
-        appScope.launch { seedLoader.seedIfEmpty() }
+        appScope.launch { seedLoader.seed() }
     }
 }

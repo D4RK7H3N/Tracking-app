@@ -2,12 +2,14 @@ package com.sagay.touristnav.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sagay.touristnav.data.local.SeedLoader
 import com.sagay.touristnav.data.repo.TripRepository
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.Terminal
 import com.sagay.touristnav.platform.LocationFix
 import com.sagay.touristnav.platform.LocationProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +23,7 @@ import javax.inject.Inject
 class TripViewModel @Inject constructor(
     private val repository: TripRepository,
     private val locationProvider: LocationProvider,
+    private val seedLoader: SeedLoader,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<UiState>(UiState.NeedsPermission)
@@ -39,6 +42,7 @@ class TripViewModel @Inject constructor(
     private var pendingDestinationId: String? = null
 
     private var fetchJob: Job? = null
+    private var isOnline = false
 
     init {
         viewModelScope.launch {
@@ -46,19 +50,18 @@ class TripViewModel @Inject constructor(
                 pendingTripId = trip.id
                 pendingOrigin = LocationFix(trip.originLat, trip.originLng)
                 pendingDestinationId = trip.destinationId
+                maybeResumePendingTrip()
             }
         }
         viewModelScope.launch {
             repository.isOnline.collect { online ->
+                isOnline = online
                 if (!online) return@collect
                 val waiting = _state.value as? UiState.WaitingForInternet
-                when {
-                    waiting != null ->
-                        fetchRoute(mapData.position, waiting.selected, waiting.terminal)
-
-                    pendingOrigin != null && pendingDestinationId != null &&
-                        _state.value is UiState.MapReady ->
-                        resumePendingTrip()
+                if (waiting != null) {
+                    startFetch(mapData.position, waiting.selected, waiting.terminal)
+                } else {
+                    maybeResumePendingTrip()
                 }
             }
         }
@@ -66,7 +69,9 @@ class TripViewModel @Inject constructor(
 
     fun onPermissionResult(granted: Boolean) {
         if (granted) {
-            locate()
+            if (_state.value is UiState.NeedsPermission || _state.value is UiState.GpsError) {
+                locate()
+            }
         } else {
             _state.value = UiState.NeedsPermission
         }
@@ -112,6 +117,7 @@ class TripViewModel @Inject constructor(
                 return@launch
             }
             if (!dataLoaded) {
+                seedLoader.seed()
                 val destinations = repository.destinations()
                 val terminals = repository.terminals().associateBy { it.id }
                 mapData = MapData(fix, destinations, terminals)
@@ -119,16 +125,14 @@ class TripViewModel @Inject constructor(
             } else {
                 mapData = mapData.copy(position = fix)
             }
-            if (pendingOrigin != null && pendingDestinationId != null) {
-                resumePendingTrip()
-            } else {
-                _state.value = UiState.MapReady(mapData)
-            }
+            _state.value = UiState.MapReady(mapData)
+            maybeResumePendingTrip()
         }
     }
 
     fun onDestinationSelected(destination: Destination) {
-        viewModelScope.launch {
+        fetchJob?.cancel()
+        fetchJob = viewModelScope.launch {
             val terminal = mapData.terminals[destination.terminalId]
                 ?: repository.terminalById(destination.terminalId)
             _state.value = UiState.DestinationSelected(mapData, destination, terminal)
@@ -147,7 +151,7 @@ class TripViewModel @Inject constructor(
 
     fun retryRoute() {
         val current = _state.value as? UiState.RouteError ?: return
-        fetchRoute(mapData.position, current.selected, current.terminal)
+        startFetch(mapData.position, current.selected, current.terminal)
     }
 
     fun selectNewDestination() {
@@ -156,11 +160,16 @@ class TripViewModel @Inject constructor(
         _state.value = UiState.MapReady(mapData)
     }
 
+    private fun maybeResumePendingTrip() {
+        if (!isOnline || !dataLoaded || _state.value !is UiState.MapReady) return
+        resumePendingTrip()
+    }
+
     private fun resumePendingTrip() {
         val origin = pendingOrigin ?: return
         val destinationId = pendingDestinationId ?: return
         if (fetchJob?.isActive == true) return
-        viewModelScope.launch {
+        fetchJob = viewModelScope.launch {
             val destination = repository.destinationById(destinationId)
             if (destination == null) {
                 clearPendingTrip()
@@ -174,36 +183,58 @@ class TripViewModel @Inject constructor(
         }
     }
 
-    private fun fetchRoute(
+    private fun startFetch(
         origin: LocationFix,
         destination: Destination,
         terminal: Terminal?,
     ) {
         if (fetchJob?.isActive == true) return
         fetchJob = viewModelScope.launch {
-            try {
-                val trip = repository.estimateTrip(
-                    origin = origin,
-                    destination = destination,
-                    terminal = terminal ?: fallbackTerminal(destination),
-                )
-                clearPendingTrip()
-                _state.value = UiState.ResultShown(mapData, trip)
-            } catch (e: IOException) {
-                if (pendingTripId == null) {
-                    pendingTripId = runCatching {
-                        repository.savePendingTrip(origin, destination.id)
-                    }.getOrNull()
-                }
-                _state.value = UiState.WaitingForInternet(mapData, destination, terminal)
-            } catch (e: Exception) {
+            fetchRoute(origin, destination, terminal)
+        }
+    }
+
+    private suspend fun fetchRoute(
+        origin: LocationFix,
+        destination: Destination,
+        terminal: Terminal?,
+    ) {
+        try {
+            val trip = repository.estimateTrip(
+                origin = origin,
+                destination = destination,
+                terminal = terminal ?: fallbackTerminal(destination),
+            )
+            clearPendingTrip()
+            _state.value = UiState.ResultShown(mapData, trip)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            if (isOnline) {
                 _state.value = UiState.RouteError(
                     data = mapData,
                     selected = destination,
                     terminal = terminal,
                     message = e.message ?: "Could not fetch the route.",
                 )
+            } else {
+                val savedId = runCatching {
+                    repository.savePendingTrip(origin, destination.id, pendingTripId)
+                }.getOrNull()
+                if (savedId != null) {
+                    pendingTripId = savedId
+                    pendingOrigin = origin
+                    pendingDestinationId = destination.id
+                }
+                _state.value = UiState.WaitingForInternet(mapData, destination, terminal)
             }
+        } catch (e: Exception) {
+            _state.value = UiState.RouteError(
+                data = mapData,
+                selected = destination,
+                terminal = terminal,
+                message = e.message ?: "Could not fetch the route.",
+            )
         }
     }
 

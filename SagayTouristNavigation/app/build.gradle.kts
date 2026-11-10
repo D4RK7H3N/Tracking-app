@@ -45,6 +45,10 @@ android {
     }
 }
 
+base {
+    archivesName.set("Sagay-Tourist-Navigator")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
