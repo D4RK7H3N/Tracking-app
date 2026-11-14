@@ -24,6 +24,25 @@ data class SeedFile(
     val terminals: List<SeedTerminal> = emptyList(),
     val destinations: List<SeedDestination> = emptyList(),
     @SerialName("fare_rule") val fareRule: SeedFareRule? = null,
+    @SerialName("fare_origins") val fareOrigins: List<SeedFareOrigin> = emptyList(),
+    @SerialName("fare_matrix") val fareMatrix: List<SeedFareMatrixRow> = emptyList(),
+)
+
+@Serializable
+data class SeedFareOrigin(
+    val zone: String,
+    val name: String,
+    val lat: Double,
+    val lng: Double,
+    val radiusKm: Double,
+)
+
+@Serializable
+data class SeedFareMatrixRow(
+    val origin: String,
+    val destination: String,
+    val regular: Double,
+    val discounted: Double,
 )
 
 @Serializable
@@ -35,6 +54,11 @@ data class SeedTerminal(
     val colorHex: String,
     val colorName: String,
     val serviceArea: String,
+    /**
+     * Vehicles boarding here, as [com.sagay.touristnav.domain.models.VehicleType.id]
+     * values. Unknown ids are ignored when the row is mapped to the domain.
+     */
+    val vehicles: List<String> = emptyList(),
 )
 
 @Serializable
@@ -47,6 +71,8 @@ data class SeedDestination(
     val terminalId: String,
     /** Island/reef destinations: road leg ends at the serving port terminal. */
     val boat: Boolean = false,
+    /** Fare-matrix route this destination belongs to (null = not on matrix). */
+    val zone: String? = null,
 )
 
 @Serializable

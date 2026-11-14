@@ -31,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +48,7 @@ import com.sagay.touristnav.R
 import com.sagay.touristnav.domain.Haversine
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.RoutePoint
+import com.sagay.touristnav.domain.models.Terminal
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -64,6 +66,7 @@ private val SELECTED_RADIUS_DP = 26f
 fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var showTerminals by rememberSaveable { mutableStateOf(false) }
 
     val permissions = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -123,6 +126,7 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
                     destinations = s.data.destinations,
                     terminals = s.data.terminals,
                     onSelect = viewModel::onDestinationSelected,
+                    onShowTerminals = { showTerminals = true },
                 )
             },
         )
@@ -180,10 +184,35 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
                 TripDetailsCard(
                     trip = s.trip,
                     onSelectNew = viewModel::selectNewDestination,
+                    onToggleDiscount = viewModel::toggleDiscount,
                 )
             },
         )
     }
+
+    if (showTerminals) {
+        TerminalLegendSheet(
+            terminals = terminalsInOrder(state),
+            onDismiss = { showTerminals = false },
+        )
+    }
+}
+
+/**
+ * Terminals of the current state in T1, T2, T3 order, which is the order a
+ * tourist learns them in.
+ */
+private fun terminalsInOrder(state: UiState): List<Terminal> {
+    val terminals = when (state) {
+        is UiState.MapReady -> state.data.terminals
+        is UiState.DestinationSelected -> state.data.terminals
+        is UiState.FetchingRoute -> state.data.terminals
+        is UiState.WaitingForInternet -> state.data.terminals
+        is UiState.RouteError -> state.data.terminals
+        is UiState.ResultShown -> state.data.terminals
+        else -> emptyMap()
+    }
+    return terminals.values.sortedBy { it.id }
 }
 
 @Composable

@@ -1,6 +1,7 @@
-package com.sagay.touristnav.ui
+﻿package com.sagay.touristnav.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -24,21 +26,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sagay.touristnav.R
+import com.sagay.touristnav.domain.models.Terminal
 import com.sagay.touristnav.domain.models.TripEstimate
 import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * V3 "Route Banner" result card: a sunrise gradient strip answers the two
- * questions tourists ask first (how far, how much), the destination details
- * follow, and terminal + color close it out.
+ * V4 result card: the sunrise gradient strip answers the two questions
+ * tourists ask first (how far, how much) with icons, and the details below
+ * tell them **which vehicle to board** â€” the part a text-only card never
+ * answered.
  */
 @Composable
 fun TripDetailsCard(
     trip: TripEstimate,
     onSelectNew: () -> Unit,
+    onToggleDiscount: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -57,25 +64,37 @@ fun TripDetailsCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text(
-                        String.format(Locale.US, "%.1f km", trip.roadKm) +
-                            " · " + formatDuration(trip.durationMinutes),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                    BannerLine(
+                        iconRes = R.drawable.ic_route,
+                        text = String.format(Locale.US, "%.1f km", trip.roadKm),
                     )
+                    Spacer(Modifier.height(2.dp))
+                    BannerLine(
+                        iconRes = R.drawable.ic_schedule,
+                        text = formatDuration(trip.durationMinutes),
+                    )
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         "estimate only",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.85f),
                     )
                 }
-                Text(
-                    String.format(Locale.US, "₱%.0f", trip.fare),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_payments),
+                        contentDescription = "Fare",
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        String.format(Locale.US, "â‚±%.0f", trip.fare),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White,
+                    )
+                }
             }
             Spacer(Modifier.height(14.dp))
             Text(
@@ -90,12 +109,21 @@ fun TripDetailsCard(
             )
             if (trip.boatNote != null) {
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    trip.boatNote,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = SagayColors.BoatTeal,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_directions_boat),
+                        contentDescription = "Boat",
+                        tint = SagayColors.BoatTeal,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        trip.boatNote,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = SagayColors.BoatTeal,
+                    )
+                }
             }
             if (trip.distanceWarning) {
                 Spacer(Modifier.height(6.dp))
@@ -106,31 +134,38 @@ fun TripDetailsCard(
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(parseHexColor(trip.terminal.colorHex))),
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    trip.terminal.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    " · ${trip.terminal.colorName}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Spacer(Modifier.height(14.dp))
+            TerminalRow(trip.terminal)
+            if (trip.originZoneName != null) {
+                Spacer(Modifier.height(10.dp))
+                IconDetailRow(
+                    icon = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_route),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
+                    label = "Fare zone",
+                    value = trip.originZoneName,
                 )
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                "Fare basis: ${trip.fareSource} · ₱15 first 3 km, +₱2 per started km, max ₱20",
+                trip.fareBasis.ifBlank { "Fare basis: ${trip.fareSource}" },
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (trip.fareIsOfficial) {
+                    SagayColors.BoatTeal
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                fontWeight = if (trip.fareIsOfficial) FontWeight.SemiBold else FontWeight.Normal,
+            )
+            Spacer(Modifier.height(10.dp))
+            DiscountToggle(
+                checked = trip.fareDiscounted,
+                onToggle = onToggleDiscount,
             )
             Spacer(Modifier.height(14.dp))
             Button(
@@ -144,6 +179,129 @@ fun TripDetailsCard(
                 Text("Select new destination")
             }
             Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+/**
+ * The board here: the vehicle badge in the route colour, the terminal name,
+ * and the service description ("Red Tricycle", "White Bus + Boat").
+ */
+@Composable
+private fun TerminalRow(terminal: Terminal) {
+    val vehicle = terminal.vehicles.firstOrNull()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (vehicle != null) {
+            RouteBadge(
+                vehicle = vehicle,
+                colorHex = terminal.colorHex,
+                size = 40.dp,
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(parseHexColor(terminal.colorHex))),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                terminal.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                terminal.serviceLabel,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (terminal.serviceArea.isNotBlank()) {
+                Text(
+                    terminal.serviceArea,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/** One line of the gradient banner: an icon and its value. */
+@Composable
+private fun BannerLine(iconRes: Int, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+        )
+    }
+}
+
+/**
+ * 20% student / senior citizen / PWD fare, as published in the city's
+ * temporary fare matrix.
+ */
+@Composable
+private fun DiscountToggle(
+    checked: Boolean,
+    onToggle: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (checked) {
+                    SagayColors.TealPrimary.copy(alpha = 0.08f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+            )
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(
+                    if (checked) SagayColors.TealPrimary else Color.Transparent,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (checked) {
+                Text(
+                    "âœ“",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "Senior citizen / Student / PWD",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                "20% discount (matrix fare)",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

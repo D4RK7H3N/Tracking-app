@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Icons "DirectionsBoat" (24dp) - Apache License 2.0.
+     Path data extracted from androidx.compose.material:material-icons-extended
+     by tools/extract-material-icons.ps1 so the app ships no icon dependency. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M 20,21 c -1.39,0,-2.78,-0.47,-4,-1.32 c -2.44,1.71,-5.56,1.71,-8,0 C 6.78,20.53,5.39,21,4,21 H 2 v 2 h 2 c 1.38,0,2.74,-0.35,4,-0.99 c 2.52,1.29,5.48,1.29,8,0 c 1.26,0.65,2.62,0.99,4,0.99 h 2 v -2 h -2 Z M 3.95,19 H 4 c 1.6,0,3.02,-0.88,4,-2 c 0.98,1.12,2.4,2,4,2 s 3.02,-0.88,4,-2 c 0.98,1.12,2.4,2,4,2 h 0.05 l 1.89,-6.68 c 0.08,-0.26,0.06,-0.54,-0.06,-0.78 s -0.34,-0.42,-0.6,-0.5 L 20,10.62 V 6 c 0,-1.1,-0.9,-2,-2,-2 h -3 V 1 H 9 v 3 H 6 c -1.1,0,-2,0.9,-2,2 v 4.62 l -1.29,0.42 c -0.26,0.08,-0.48,0.26,-0.6,0.5 s -0.15,0.52,-0.06,0.78 L 3.95,19 Z M 6,6 h 12 v 3.97 L 12,8 L 6,9.97 V 6 Z" />
+</vector>

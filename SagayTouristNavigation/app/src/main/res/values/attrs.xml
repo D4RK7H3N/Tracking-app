@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The bundled Material-style icon drawables tint themselves with
+        ?attr/colorControlNormal. The app theme is android:Theme.Material.Light
+        (not AppCompat), so the attribute is declared here with a default.
+    -->
+    <attr name="colorControlNormal" format="color">#FF00695C</attr>
+</resources>

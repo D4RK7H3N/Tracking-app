@@ -13,4 +13,10 @@ data class TerminalEntity(
     @ColumnInfo(name = "colorHex") val colorHex: String,
     @ColumnInfo(name = "colorName") val colorName: String,
     @ColumnInfo(name = "serviceArea") val serviceArea: String,
+    /**
+     * Vehicle ids that board here, comma separated (see
+     * `VehicleType.id`). Stored as one column because a terminal serves a
+     * short, ordered list of vehicles that is only ever read as a whole.
+     */
+    @ColumnInfo(name = "vehicles") val vehicles: String = "",
 )

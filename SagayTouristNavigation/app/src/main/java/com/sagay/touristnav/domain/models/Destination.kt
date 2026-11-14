@@ -13,4 +13,9 @@ data class Destination(
      * the trip result notes that a boat ride is required from that terminal.
      */
     val requiresBoat: Boolean = false,
+    /**
+     * Route label in the official fare matrix this destination belongs to
+     * (e.g. "BRGY. VITO"). Null when the destination is not on the matrix.
+     */
+    val fareZone: String? = null,
 )

@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Icons "Wallet" (24dp) - Apache License 2.0.
+     Path data extracted from androidx.compose.material:material-icons-extended
+     by tools/extract-material-icons.ps1 so the app ships no icon dependency. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M 18,4 H 6 C 3.79,4,2,5.79,2,8 v 8 c 0,2.21,1.79,4,4,4 h 12 c 2.21,0,4,-1.79,4,-4 V 8 C 22,5.79,20.21,4,18,4 Z M 16.14,13.77 c -0.24,0.2,-0.57,0.28,-0.88,0.2 L 4.15,11.25 C 4.45,10.52,5.16,10,6,10 h 12 c 0.67,0,1.26,0.34,1.63,0.84 L 16.14,13.77 Z M 6,6 h 12 c 1.1,0,2,0.9,2,2 v 0.55 C 19.41,8.21,18.73,8,18,8 H 6 C 5.27,8,4.59,8.21,4,8.55 V 8 C 4,6.9,4.9,6,6,6 Z" />
+</vector>

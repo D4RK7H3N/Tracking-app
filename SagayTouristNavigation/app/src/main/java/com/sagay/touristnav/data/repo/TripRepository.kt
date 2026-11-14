@@ -1,6 +1,8 @@
 package com.sagay.touristnav.data.repo
 
 import com.sagay.touristnav.data.local.dao.DestinationDao
+import com.sagay.touristnav.data.local.dao.FareMatrixDao
+import com.sagay.touristnav.data.local.dao.FareOriginDao
 import com.sagay.touristnav.data.local.dao.FareRuleDao
 import com.sagay.touristnav.data.local.dao.TerminalDao
 import com.sagay.touristnav.data.local.dao.TripStateDao
@@ -11,6 +13,8 @@ import com.sagay.touristnav.data.remote.RouteException
 import com.sagay.touristnav.domain.Haversine
 import com.sagay.touristnav.domain.TripEstimator
 import com.sagay.touristnav.domain.models.Destination
+import com.sagay.touristnav.domain.models.FareMatrixEntry
+import com.sagay.touristnav.domain.models.FareOrigin
 import com.sagay.touristnav.domain.models.FareRule
 import com.sagay.touristnav.domain.models.RoutePoint
 import com.sagay.touristnav.domain.models.RouteSummary
@@ -29,6 +33,8 @@ class TripRepository @Inject constructor(
     private val destinationDao: DestinationDao,
     private val fareRuleDao: FareRuleDao,
     private val tripStateDao: TripStateDao,
+    private val fareMatrixDao: FareMatrixDao,
+    private val fareOriginDao: FareOriginDao,
     private val estimator: TripEstimator,
     connectivityObserver: ConnectivityObserver,
 ) {
@@ -88,10 +94,14 @@ class TripRepository @Inject constructor(
         origin: LocationFix,
         destination: Destination,
         terminal: Terminal,
+        route: RouteSummary? = null,
+        discounted: Boolean = false,
     ): TripEstimate {
-        val roadLat = if (destination.requiresBoat) terminal.lat else destination.lat
-        val roadLng = if (destination.requiresBoat) terminal.lng else destination.lng
-        val route = fetchRoute(origin, roadLat, roadLng)
+        val resolvedRoute = route ?: fetchRoute(
+            origin = origin,
+            targetLat = if (destination.requiresBoat) terminal.lat else destination.lat,
+            targetLng = if (destination.requiresBoat) terminal.lng else destination.lng,
+        )
         val rule = fareRule()
         return estimator.estimate(
             originLat = origin.lat,
@@ -99,9 +109,18 @@ class TripRepository @Inject constructor(
             destination = destination,
             terminal = terminal,
             fareRule = rule,
-            route = route,
+            route = resolvedRoute,
+            matrixEntries = fareMatrix(),
+            fareOrigins = fareOrigins(),
+            discounted = discounted,
         )
     }
+
+    suspend fun fareMatrix(): List<FareMatrixEntry> =
+        fareMatrixDao.getAll().map { it.toDomain() }
+
+    suspend fun fareOrigins(): List<FareOrigin> =
+        fareOriginDao.getAll().map { it.toDomain() }
 
     suspend fun savePendingTrip(
         origin: LocationFix,

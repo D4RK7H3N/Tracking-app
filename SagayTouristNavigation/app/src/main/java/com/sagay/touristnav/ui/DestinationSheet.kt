@@ -1,10 +1,12 @@
-package com.sagay.touristnav.ui
+﻿package com.sagay.touristnav.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,10 +21,12 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,8 +37,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sagay.touristnav.R
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.Terminal
 
@@ -43,6 +49,7 @@ fun DestinationSheet(
     destinations: List<Destination>,
     terminals: Map<String, Terminal>,
     onSelect: (Destination) -> Unit,
+    onShowTerminals: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     val filtered = remember(destinations, query) {
@@ -72,7 +79,7 @@ fun DestinationSheet(
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
                 singleLine = true,
-                placeholder = { Text("Search a destination or category…") },
+                placeholder = { Text("Search a destination or categoryâ€¦") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -82,6 +89,7 @@ fun DestinationSheet(
                     unfocusedBorderColor = SagayColors.Hairline,
                 ),
             )
+            TerminalsButton(onShowTerminals)
             if (filtered.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No destinations match your search.")
@@ -97,14 +105,30 @@ fun DestinationSheet(
                             headlineContent = {
                                 Text(destination.name, fontWeight = FontWeight.SemiBold)
                             },
-                            supportingContent = { Text(destination.category) },
-                            leadingContent = {
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(parseHexColor(terminal?.colorHex))),
+                            supportingContent = {
+                                Text(
+                                    listOfNotNull(
+                                        destination.category,
+                                        terminal?.serviceLabel,
+                                    ).joinToString(" Â· "),
                                 )
+                            },
+                            leadingContent = {
+                                val vehicle = terminal?.vehicles?.firstOrNull()
+                                if (vehicle != null) {
+                                    RouteBadge(
+                                        vehicle = vehicle,
+                                        colorHex = terminal.colorHex,
+                                        size = 36.dp,
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(parseHexColor(terminal?.colorHex))),
+                                    )
+                                }
                             },
                             trailingContent = {
                                 Icon(Icons.Default.KeyboardArrowRight, contentDescription = null)
@@ -114,6 +138,30 @@ fun DestinationSheet(
                     }
                 }
             }
+        }
+    }
+}
+
+/** Opens the legend of terminals, route colours and vehicles. */
+@Composable
+private fun TerminalsButton(onShowTerminals: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 8.dp, end = 8.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextButton(onClick = onShowTerminals) {
+            Icon(
+                painter = painterResource(R.drawable.ic_groups),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.size(8.dp))
+            Text(
+                "Terminals & routes",
+                style = MaterialTheme.typography.labelLarge,
+            )
         }
     }
 }

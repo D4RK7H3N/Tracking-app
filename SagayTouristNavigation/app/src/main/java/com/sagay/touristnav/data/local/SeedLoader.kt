@@ -35,6 +35,7 @@ class SeedLoader @Inject constructor(
                             colorHex = it.colorHex,
                             colorName = it.colorName,
                             serviceArea = it.serviceArea,
+                            vehicles = it.vehicles.joinToString(","),
                         )
                     },
                 )
@@ -48,6 +49,28 @@ class SeedLoader @Inject constructor(
                             lng = it.lng,
                             terminalId = it.terminalId,
                             requiresBoat = it.boat,
+                            fareZone = it.zone,
+                        )
+                    },
+                )
+                database.fareOriginDao().insertAll(
+                    seed.fareOrigins.map {
+                        FareOriginEntity(
+                            zone = it.zone,
+                            name = it.name,
+                            lat = it.lat,
+                            lng = it.lng,
+                            radiusKm = it.radiusKm,
+                        )
+                    },
+                )
+                database.fareMatrixDao().insertAll(
+                    seed.fareMatrix.map {
+                        FareMatrixEntity(
+                            originZone = it.origin,
+                            destinationZone = it.destination,
+                            regularFare = it.regular,
+                            discountedFare = it.discounted,
                         )
                     },
                 )

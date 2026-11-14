@@ -12,4 +12,6 @@ data class DestinationEntity(
     val lng: Double,
     val terminalId: String,
     val requiresBoat: Boolean,
+    /** Fare-matrix route this destination belongs to (null = not on the matrix). */
+    val fareZone: String?,
 )

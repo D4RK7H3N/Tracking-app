@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.sagay.touristnav.data.local.SeedLoader
 import com.sagay.touristnav.data.repo.TripRepository
 import com.sagay.touristnav.domain.models.Destination
+import com.sagay.touristnav.domain.models.RouteSummary
 import com.sagay.touristnav.domain.models.Terminal
 import com.sagay.touristnav.platform.LocationFix
 import com.sagay.touristnav.platform.LocationProvider
@@ -42,6 +43,15 @@ class TripViewModel @Inject constructor(
     private var pendingDestinationId: String? = null
 
     private var fetchJob: Job? = null
+
+    /** Student / senior citizen / PWD discount (20% in the city matrix). */
+    private var discounted: Boolean = false
+
+    /** Cached route of the current trip, so the discount toggle needs no network. */
+    private var cachedRoute: RouteSummary? = null
+    private var cachedOrigin: LocationFix? = null
+    private var cachedDestination: Destination? = null
+    private var cachedTerminal: Terminal? = null
     private var isOnline = false
 
     init {
@@ -151,7 +161,33 @@ class TripViewModel @Inject constructor(
 
     fun retryRoute() {
         val current = _state.value as? UiState.RouteError ?: return
-        startFetch(mapData.position, current.selected, current.terminal)
+        fetchJob?.cancel()
+        fetchJob = viewModelScope.launch {
+            fetchRoute(mapData.position, current.selected, current.terminal)
+        }
+    }
+
+    /**
+     * Toggles the 20% student / senior citizen / PWD fare. The route is
+     * reused, so this never hits the network.
+     */
+    fun toggleDiscount() {
+        val current = _state.value as? UiState.ResultShown ?: return
+        val route = cachedRoute ?: return
+        val origin = cachedOrigin ?: return
+        val destination = cachedDestination ?: return
+        val terminal = cachedTerminal ?: return
+        discounted = !discounted
+        viewModelScope.launch {
+            val trip = repository.estimateTrip(
+                origin = origin,
+                destination = destination,
+                terminal = terminal,
+                route = route,
+                discounted = discounted,
+            )
+            _state.value = UiState.ResultShown(mapData, trip)
+        }
     }
 
     fun selectNewDestination() {
@@ -200,10 +236,23 @@ class TripViewModel @Inject constructor(
         terminal: Terminal?,
     ) {
         try {
+            val resolvedTerminal = terminal ?: fallbackTerminal(destination)
+            val route = repository.fetchRoute(
+                origin = origin,
+                targetLat = if (destination.requiresBoat) resolvedTerminal.lat else destination.lat,
+                targetLng = if (destination.requiresBoat) resolvedTerminal.lng else destination.lng,
+            )
+            // Cache so the discount toggle can re-price without another request.
+            cachedRoute = route
+            cachedOrigin = origin
+            cachedDestination = destination
+            cachedTerminal = resolvedTerminal
             val trip = repository.estimateTrip(
                 origin = origin,
                 destination = destination,
-                terminal = terminal ?: fallbackTerminal(destination),
+                terminal = resolvedTerminal,
+                route = route,
+                discounted = discounted,
             )
             clearPendingTrip()
             _state.value = UiState.ResultShown(mapData, trip)

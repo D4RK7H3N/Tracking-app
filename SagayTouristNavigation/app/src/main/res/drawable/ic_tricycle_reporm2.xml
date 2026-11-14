@@ -1,0 +1,41 @@
+<!--
+  Reporm 2 tricycle (24dp), hand-drawn for Sagay City.
+
+  The Reporm 2 is the standard motorized tricycle in Negros Occidental: a
+  motorcycle-style front (visible handlebar and a single front wheel) behind
+  a boxy passenger canopy on three wheels. It is deliberately different in
+  silhouette from Material's "electric_rickshaw" glyph, which is a closed
+  three-wheeler with an integral windscreen, so the two tricycle services in
+  the app are told apart at a glance.
+
+  Colour is applied at runtime (the route colour of the serving terminal),
+  so this single drawable covers the Red, Yellow and White tricycles.
+
+  Path data is authored for this project; no Material artwork is used here.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Passenger canopy and body, open along the side. -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M2.6,12.6 V7.2 C2.6,4.9 4.4,3.2 6.6,3.2 H11.8 C13.7,3.2 15.1,4.4 15.5,6.2 L16,9.6 V12.6 Z" />
+    <!-- Handlebar of the motorcycle front. -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M14.3,8.3 H18.3 V9.6 H14.3 Z" />
+    <!-- Front fork sloping down to the front wheel. -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M15.6,10.1 H17.5 L19.4,13.9 H17.5 Z" />
+    <!-- Rear wheel. -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M3.7,14.7 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0 Z" />
+    <!-- Front wheel. -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M16,14.7 a2.4,2.4 0 1,0 4.8,0 a2.4,2.4 0 1,0 -4.8,0 Z" />
+</vector>

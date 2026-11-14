@@ -12,4 +12,12 @@ data class TripEstimate(
     val fareSource: String,
     /** Set when the destination is offshore: boat ride required from the terminal. */
     val boatNote: String? = null,
+    /** Human-readable explanation of how the fare was obtained. */
+    val fareBasis: String = "",
+    /** True when the fare comes from the official fare matrix. */
+    val fareIsOfficial: Boolean = false,
+    /** True when the 20% student / senior citizen / PWD fare was applied. */
+    val fareDiscounted: Boolean = false,
+    /** Matrix zone the passenger was detected in, when known. */
+    val originZoneName: String? = null,
 )
