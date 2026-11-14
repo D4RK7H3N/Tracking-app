@@ -74,6 +74,29 @@ class SeedLoader @Inject constructor(
                         )
                     },
                 )
+                database.busRouteDao().insertRoutes(
+                    seed.busRoutes.map {
+                        BusRouteEntity(
+                            id = it.id,
+                            name = it.name,
+                            terminalId = it.terminalId,
+                            colorHex = it.colorHex,
+                        )
+                    },
+                )
+                database.busRouteDao().insertStops(
+                    seed.busRoutes.flatMap { route ->
+                        route.stops.mapIndexed { index, stop ->
+                            BusRouteStopEntity(
+                                routeId = route.id,
+                                stopOrder = index,
+                                name = stop.name,
+                                lat = stop.lat,
+                                lng = stop.lng,
+                            )
+                        }
+                    },
+                )
                 seed.fareRule?.let {
                     database.fareRuleDao().insert(
                         FareRuleEntity(

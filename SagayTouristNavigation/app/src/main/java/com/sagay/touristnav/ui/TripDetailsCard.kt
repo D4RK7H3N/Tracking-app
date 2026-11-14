@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -30,6 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sagay.touristnav.R
+import com.sagay.touristnav.domain.models.BusRoute
 import com.sagay.touristnav.domain.models.Terminal
 import com.sagay.touristnav.domain.models.TripEstimate
 import java.util.Locale
@@ -136,6 +138,10 @@ fun TripDetailsCard(
             }
             Spacer(Modifier.height(14.dp))
             TerminalRow(trip.terminal)
+            if (trip.busRoute != null && trip.busRoute.stops.size > 1) {
+                Spacer(Modifier.height(12.dp))
+                BusStopsBlock(trip.busRoute)
+            }
             if (trip.originZoneName != null) {
                 Spacer(Modifier.height(10.dp))
                 IconDetailRow(
@@ -179,6 +185,64 @@ fun TripDetailsCard(
                 Text("Select new destination")
             }
             Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+/**
+ * The stops of a bus / jeepney route. Tricycle trips have no stops, so the
+ * block only appears for bus services.
+ */
+@Composable
+private fun BusStopsBlock(route: BusRoute) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(R.drawable.ic_directions_bus),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                route.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        route.stops.forEach { stop ->
+            Row(
+                modifier = Modifier.padding(vertical = 2.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clip(CircleShape)
+                        .background(Color(parseHexColor(route.colorHex))),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        (stop.order + 1).toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    stop.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

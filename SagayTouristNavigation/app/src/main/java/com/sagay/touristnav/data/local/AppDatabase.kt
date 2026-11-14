@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.sagay.touristnav.data.local.dao.BusRouteDao
 import com.sagay.touristnav.data.local.dao.DestinationDao
 import com.sagay.touristnav.data.local.dao.FareMatrixDao
 import com.sagay.touristnav.data.local.dao.FareOriginDao
@@ -19,8 +20,10 @@ import com.sagay.touristnav.data.local.dao.TripStateDao
         TripStateEntity::class,
         FareMatrixEntity::class,
         FareOriginEntity::class,
+        BusRouteEntity::class,
+        BusRouteStopEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -30,6 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tripStateDao(): TripStateDao
     abstract fun fareMatrixDao(): FareMatrixDao
     abstract fun fareOriginDao(): FareOriginDao
+    abstract fun busRouteDao(): BusRouteDao
 
     companion object {
         val MIGRATION_2_3 = object : Migration(2, 3) {
@@ -72,6 +76,29 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "ALTER TABLE `terminal` ADD COLUMN `vehicles` TEXT NOT NULL DEFAULT ''",
+                )
+            }
+        }
+
+        /** Adds bus / jeepney routes and their ordered stops. */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `bus_route` (" +
+                        "`id` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`terminalId` TEXT NOT NULL, " +
+                        "`colorHex` TEXT NOT NULL, " +
+                        "PRIMARY KEY(`id`))",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `bus_route_stop` (" +
+                        "`routeId` TEXT NOT NULL, " +
+                        "`stopOrder` INTEGER NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`lat` REAL NOT NULL, " +
+                        "`lng` REAL NOT NULL, " +
+                        "PRIMARY KEY(`routeId`, `stopOrder`))",
                 )
             }
         }

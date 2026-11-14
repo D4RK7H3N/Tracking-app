@@ -26,6 +26,23 @@ data class SeedFile(
     @SerialName("fare_rule") val fareRule: SeedFareRule? = null,
     @SerialName("fare_origins") val fareOrigins: List<SeedFareOrigin> = emptyList(),
     @SerialName("fare_matrix") val fareMatrix: List<SeedFareMatrixRow> = emptyList(),
+    @SerialName("bus_routes") val busRoutes: List<SeedBusRoute> = emptyList(),
+)
+
+@Serializable
+data class SeedBusRoute(
+    val id: String,
+    val name: String,
+    val terminalId: String,
+    val colorHex: String,
+    val stops: List<SeedBusRouteStop> = emptyList(),
+)
+
+@Serializable
+data class SeedBusRouteStop(
+    val name: String,
+    val lat: Double,
+    val lng: Double,
 )
 
 @Serializable

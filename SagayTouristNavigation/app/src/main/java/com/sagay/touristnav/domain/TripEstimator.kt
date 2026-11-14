@@ -1,5 +1,6 @@
 package com.sagay.touristnav.domain
 
+import com.sagay.touristnav.domain.models.BusRoute
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.FareMatrixEntry
 import com.sagay.touristnav.domain.models.FareOrigin
@@ -20,6 +21,7 @@ class TripEstimator @Inject constructor() {
         route: RouteSummary,
         matrixEntries: List<FareMatrixEntry> = emptyList(),
         fareOrigins: List<FareOrigin> = emptyList(),
+        busRoutes: List<BusRoute> = emptyList(),
         discounted: Boolean = false,
     ): TripEstimate {
         // For island/reef destinations the road leg ends at the port terminal,
@@ -74,6 +76,9 @@ class TripEstimator @Inject constructor() {
             fareIsOfficial = fareIsOfficial,
             fareDiscounted = discounted,
             originZoneName = origin?.name,
+            // A terminal that boards a bus gets its bus route (with stops);
+            // tricycle terminals are direct point-to-point rides.
+            busRoute = busRoutes.firstOrNull { it.terminalId == terminal.id },
         )
     }
 }

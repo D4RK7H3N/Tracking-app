@@ -48,6 +48,7 @@ import com.sagay.touristnav.R
 import com.sagay.touristnav.domain.Haversine
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.RoutePoint
+import com.sagay.touristnav.domain.models.RouteStop
 import com.sagay.touristnav.domain.models.Terminal
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -180,6 +181,8 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             routePoints = s.trip.routePoints,
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
+            busStops = s.trip.busRoute?.stops.orEmpty(),
+            busColorHex = s.trip.busRoute?.colorHex ?: "#FFFFFF",
             bottomContent = {
                 TripDetailsCard(
                     trip = s.trip,
@@ -222,6 +225,8 @@ private fun TripMap(
     routePoints: List<RoutePoint>,
     onDestinationClick: (Destination) -> Unit,
     onLocateMe: () -> Unit,
+    busStops: List<RouteStop> = emptyList(),
+    busColorHex: String = "#FFFFFF",
     bottomContent: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -279,12 +284,23 @@ private fun TripMap(
                 if (routePoints.size >= 2) {
                     mv.overlays.add(routePolyline(routePoints))
                 }
+                busStops.forEach { stop ->
+                    mv.overlays.add(
+                        stopMarker(
+                            mapView = mv,
+                            context = context,
+                            stop = stop,
+                            color = parseHexColor(busColorHex),
+                        ),
+                    )
+                }
                 if (cameraKey != lastCameraKey) {
                     lastCameraKey = cameraKey
                     val focusPoints = buildList {
                         add(GeoPoint(position.lat, position.lng))
                         selected?.let { add(GeoPoint(it.lat, it.lng)) }
                         routePoints.forEach { add(GeoPoint(it.lat, it.lng)) }
+                        busStops.forEach { add(GeoPoint(it.lat, it.lng)) }
                     }
                     // Manual camera fit: zoomToBoundingBox can hang forever in
                     // Projection.getCloserPixel on small/degenerate boxes.
@@ -424,6 +440,52 @@ private fun destinationMarker(
         )
         title = destination.name
     }
+
+/**
+ * A bus stop marker: the route colour with the stop number inside, so the
+ * order of the stops is readable straight from the map.
+ */
+private fun stopMarker(
+    mapView: MapView,
+    context: Context,
+    stop: RouteStop,
+    color: Int,
+): Marker =
+    Marker(mapView).apply {
+        position = GeoPoint(stop.lat, stop.lng)
+        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        icon = numberedCircleIcon(context, color, stop.order + 1)
+        title = stop.name
+    }
+
+private fun numberedCircleIcon(
+    context: Context,
+    color: Int,
+    number: Int,
+): BitmapDrawable {
+    val density = context.resources.displayMetrics.density
+    val size = (26f * density).toInt().coerceAtLeast(12)
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val center = size / 2f
+    val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
+    canvas.drawCircle(center, center, center - 2f * density, fill)
+    val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = android.graphics.Color.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 2f * density
+    }
+    canvas.drawCircle(center, center, center - 2f * density, stroke)
+    val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = android.graphics.Color.BLACK
+        textSize = 12f * density
+        textAlign = Paint.Align.CENTER
+        isFakeBoldText = true
+    }
+    val baseline = center - (text.descent() + text.ascent()) / 2f
+    canvas.drawText(number.toString(), center, baseline, text)
+    return BitmapDrawable(context.resources, bitmap)
+}
 
 private fun routePolyline(points: List<RoutePoint>): Polyline =
     Polyline().apply {

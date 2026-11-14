@@ -1,9 +1,11 @@
 package com.sagay.touristnav.data.local
 
+import com.sagay.touristnav.domain.models.BusRoute
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.FareMatrixEntry
 import com.sagay.touristnav.domain.models.FareOrigin
 import com.sagay.touristnav.domain.models.FareRule
+import com.sagay.touristnav.domain.models.RouteStop
 import com.sagay.touristnav.domain.models.Terminal
 import com.sagay.touristnav.domain.models.VehicleType
 
@@ -54,4 +56,15 @@ fun FareOriginEntity.toDomain(): FareOrigin = FareOrigin(
     lat = lat,
     lng = lng,
     radiusKm = radiusKm,
+)
+
+fun BusRouteEntity.toDomain(stops: List<BusRouteStopEntity>): BusRoute = BusRoute(
+    id = id,
+    name = name,
+    terminalId = terminalId,
+    colorHex = colorHex,
+    stops = stops
+        .filter { it.routeId == id }
+        .sortedBy { it.stopOrder }
+        .map { RouteStop(order = it.stopOrder, name = it.name, lat = it.lat, lng = it.lng) },
 )

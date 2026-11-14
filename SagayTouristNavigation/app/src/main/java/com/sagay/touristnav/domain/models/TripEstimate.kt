@@ -20,4 +20,9 @@ data class TripEstimate(
     val fareDiscounted: Boolean = false,
     /** Matrix zone the passenger was detected in, when known. */
     val originZoneName: String? = null,
+    /**
+     * Bus / jeepney route with its stops, when the trip is served by a bus
+     * rather than a direct tricycle ride.
+     */
+    val busRoute: BusRoute? = null,
 )

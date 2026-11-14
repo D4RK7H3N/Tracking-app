@@ -50,6 +50,56 @@ public (`pk.`) and a secret downloads (`sk.`) token.
   terminal id resolves, that the 8 island destinations carry the boat flag,
   the 39 fare-matrix rows and 5 origins, the fare values (15 / 3 km / +2),
   and that colours are valid `#RRGGBB` codes.
+- `VehicleType` — the three routes and the vehicles boarding at each one,
+  the vehicle id round trip, `Terminal.serviceLabel`, and that an unknown
+  stored vehicle id is dropped instead of breaking the terminal.
+
+## Route colours and vehicles
+
+Every service in Sagay City is known by its colour, so the app shows the
+route colour together with the vehicle that carries it:
+
+| Terminal | Colour | Vehicles | Serves |
+| --- | --- | --- | --- |
+| T1 Sagay Public Market (Poblacion) | Red | Tricycle | Poblacion, Public Plaza, Public Market, Rizal |
+| T2 Vito (Government Center route) | Yellow | Reporm 2 Tricycle, Boat | Vito, Vito Fish Port (Molocaboc boats), National Highway |
+| T3 Old Sagay Port | White | Bus, Boat | Old Sagay to Sagay City, Sagay City to Old Sagay, Taba-ao, Bulanon, Himoga-an Baybay, Carbin Reef and Suyac boats |
+
+The vehicle a terminal serves is **data, not code**: `seed.json` ->
+`terminals[].vehicles` is a list of vehicle ids (`bus`, `tricycle`, `reporm2`,
+`boat`). Change one array and restart the app. The colour chip, the icon in
+the destination list and the badge on the trip card all follow the route
+colour, and the glyph switches to a dark ink on light routes so the white bus
+and the yellow tricycle stay readable.
+
+The **Terminals & routes** button above the destination list opens a legend
+of all three routes — the cheat sheet for "which one is the red one?".
+
+## Icons
+
+The app ships **no icon dependency**. `material-icons-extended` is not on the
+classpath, and because the release build does not run R8 or resource
+shrinking, adding it would ship all 2 084 icons in the APK.
+
+Instead, `tools/extract-material-icons.ps1` reads the `material-icons-extended`
+AAR and decompiles each icon's vector path out of the generated Kotlin
+bytecode, emitting local Android `<vector>` drawables under
+`app/src/main/res/drawable/`. The result is pixel-accurate Material art in
+about one kilobyte per icon, and it is the convention the project already used
+for `ic_my_location.xml`.
+
+```
+.\tools\extract-material-icons.ps1 `
+    -Aar <path-to-material-icons-extended.aar> `
+    -OutDir app\src\main\res\drawable `
+    -Icons DirectionsBus,ElectricRickshaw,DirectionsBoat,Payments,Schedule,Route
+```
+
+Material Icons are Apache-2.0 licensed and every generated drawable carries
+an attribution comment. `ic_tricycle_reporm2.xml` is hand-drawn for this
+project — the Reporm 2 has a motorcycle front and an open passenger side,
+unlike Material's closed `electric_rickshaw` — so the two tricycle services
+are told apart at a glance.
 
 ## The official fare matrix (Resolution No. 2026-117)
 
@@ -98,11 +148,29 @@ terminal** (Old Sagay Port or Vito) — the driving profile cannot cross water �
 and the result card shows *"Boat ride required from ⟨terminal⟩"*. The fare
 covers the road leg to the port only.
 
+## Bus routes have stops, tricycle trips do not
+
+Tricycle rides are direct point-to-point trips, so no intermediate stops are
+shown. The **bus / jeepney** corridor between Sagay City Bus Terminal (Poblacion)
+and Old Sagay Port is a route with stops, so the app shows them:
+
+- `assets/seed.json` -> `bus_routes[]` holds the route, its terminal, its
+  colour and its ordered `stops[]` (the stops sit on the real 6.6 km road,
+  taken from OpenStreetMap and matched against the OSRM route);
+- the map draws a numbered marker per stop in the route colour, so the order is
+  readable at a glance;
+- the result card lists the stops under the terminal.
+
+Add more bus routes the same way; each route references a terminal id and the
+stops are stored in travel order.
+
 ## REPLACE WITH REAL DATA (verified values pending fieldwork)
 
-1. **Terminal coordinates and colors** — `assets/seed.json` -> `terminals[]`.
-   Researched from public sources; verify colours and coordinates with the
-   Sagay City Tourism Office / LTFRB-franchised operators.
+1. **Terminal coordinates, colours and vehicles** — `assets/seed.json` ->
+   `terminals[]`. The route colours (red tricycle, yellow Reporm 2, white bus)
+   were supplied by the app owner; the coordinates were researched from
+   public sources. Verify all of it with the Sagay City Tourism Office /
+   LTFRB-franchised operators.
 2. **Destinations** — `assets/seed.json` -> `destinations[]`. 38 entries
    (tourist spots + 21 DepEd schools from the OSM/Overpass data and the
    DepEd Division of Sagay City directory); coordinates from PhilAtlas /
@@ -130,16 +198,19 @@ covers the road leg to the port only.
 
 ```
 app/src/main/java/com/sagay/touristnav/
- ui/         MapScreen, DestinationSheet, TripDetailsCard, PermissionPrompt,
-             TripViewModel, UiState
+ ui/         MapScreen, DestinationSheet, TripDetailsCard, TerminalLegendSheet,
+             SagayIcons, PermissionPrompt, TripViewModel, UiState
   domain/     FareCalculator, TripEstimator, Haversine,
               FareZoneDetector / FareMatrixLookup, models
+              (Terminal, VehicleType, Destination, FareRule, TripEstimate,
+              BusRoute, RouteStop)
   data/local/ AppDatabase, TerminalDao, DestinationDao, FareRuleDao,
-              FareMatrixDao, FareOriginDao, TripStateDao, entities,
-              SeedLoader, SeedParser
+              FareMatrixDao, FareOriginDao, BusRouteDao, TripStateDao,
+              entities, SeedLoader, SeedParser
  data/remote/DirectionsApi (Mapbox Directions v5, driving)
  data/repo/  TripRepository
  platform/   LocationProvider (Fused), ConnectivityObserver
+tools/       extract-material-icons.ps1 (Material icon -> vector drawable)
 ```
 
 Runtime state machine:
