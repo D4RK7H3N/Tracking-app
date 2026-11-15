@@ -31,6 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sagay.touristnav.R
+import com.sagay.touristnav.domain.models.FareScope
 import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.Terminal
 import com.sagay.touristnav.domain.models.TripEstimate
@@ -91,7 +92,7 @@ fun TripDetailsCard(
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        String.format(Locale.US, "\u20B1%.0f", trip.fare),
+                        fareHeadline(trip.fare),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Black,
                         color = Color.White,
@@ -158,21 +159,14 @@ fun TripDetailsCard(
                 )
             }
             Spacer(Modifier.height(4.dp))
-            Text(
-                trip.fareBasis.ifBlank { "Fare basis: ${trip.fareSource}" },
-                style = MaterialTheme.typography.bodySmall,
-                color = if (trip.fareIsOfficial) {
-                    SagayColors.BoatTeal
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                fontWeight = if (trip.fareIsOfficial) FontWeight.SemiBold else FontWeight.Normal,
-            )
-            Spacer(Modifier.height(10.dp))
-            DiscountToggle(
-                checked = trip.fareDiscounted,
-                onToggle = onToggleDiscount,
-            )
+            FareBasisBlock(fare = trip.fare)
+            if (trip.fare is FareScope.MotorizedTricycle || trip.fare is FareScope.Island) {
+                Spacer(Modifier.height(10.dp))
+                DiscountToggle(
+                    checked = trip.fareDiscounted,
+                    onToggle = onToggleDiscount,
+                )
+            }
             Spacer(Modifier.height(14.dp))
             Button(
                 onClick = onSelectNew,
@@ -197,27 +191,28 @@ fun TripDetailsCard(
 @Composable
 private fun RouteRow(trip: TripEstimate) {
     val route = trip.route
-    val colorHex = route?.colorHex ?: trip.terminal.colorHex
     val vehicle = route?.vehicle
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (vehicle != null) {
             RouteBadge(
                 vehicle = vehicle,
-                colorHex = colorHex,
+                colorHex = route.colorHex,
                 size = 40.dp,
             )
         } else {
+            // No route is known, so the terminal must not be shown as the
+            // service: its colour belongs to other routes.
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(parseHexColor(colorHex))),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
             )
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                route?.serviceLabel ?: trip.terminal.colorName,
+                route?.serviceLabel ?: "Public transport details need verification",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -316,6 +311,75 @@ private fun BannerLine(iconRes: Int, text: String) {
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = Color.White,
+        )
+    }
+}
+
+/**
+ * The fare shown in the banner, scoped to the vehicle carrying the trip.
+ *
+ * A tricycle ride shows its amount. An island trip shows the tricycle leg to
+ * the port, marked as such, because the boat fare is not published and the
+ * land amount is not the price of the whole trip. A bus ride shows that its
+ * fare is not verified rather than a tricycle fare that does not apply.
+ */
+private fun fareHeadline(fare: FareScope): String = when (fare) {
+    is FareScope.MotorizedTricycle -> String.format(Locale.US, "\u20B1%.0f", fare.amount)
+    is FareScope.Island -> String.format(Locale.US, "\u20B1%.0f", fare.tricycleToPort.amount)
+    FareScope.Bus -> "Not verified"
+    FareScope.Unverified -> "Not verified"
+}
+
+/**
+ * The fare explanation, one line per scope.
+ *
+ * The official matrix is highlighted; an estimate and an unverified fare are
+ * plainly labelled so no unpublished fare reads as a published one.
+ */
+@Composable
+private fun FareBasisBlock(fare: FareScope) {
+    when (fare) {
+        is FareScope.MotorizedTricycle -> {
+            val tricycle = fare
+            Text(
+                tricycle.basis,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (tricycle.isOfficial) {
+                    SagayColors.BoatTeal
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                fontWeight = if (tricycle.isOfficial) FontWeight.SemiBold else FontWeight.Normal,
+            )
+        }
+        is FareScope.Island -> {
+            val tricycle = fare.tricycleToPort
+            Text(
+                "Tricycle fare to the port: ${tricycle.basis}",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (tricycle.isOfficial) {
+                    SagayColors.BoatTeal
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                fontWeight = if (tricycle.isOfficial) FontWeight.SemiBold else FontWeight.Normal,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                "Boat fare not verified",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        FareScope.Bus -> Text(
+            "Bus fare not verified: the published matrix prices tricycle rides only.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        FareScope.Unverified -> Text(
+            "Fare not verified: local public-transport details need confirmation.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

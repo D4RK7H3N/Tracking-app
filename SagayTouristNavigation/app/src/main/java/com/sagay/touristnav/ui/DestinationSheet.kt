@@ -112,18 +112,19 @@ fun DestinationSheet(
                                 Text(
                                     listOfNotNull(
                                         destination.category,
-                                        route?.serviceLabel ?: terminal?.serviceLabel,
+                                        // Without a route the terminal's own
+                                        // vehicles are not this
+                                        // destination's service.
+                                        route?.serviceLabel
+                                            ?: terminal?.serviceLabel,
                                     ).joinToString(" \u00B7 "),
                                 )
                             },
                             leadingContent = {
-                                val vehicle = route?.vehicle ?: terminal?.vehicles?.firstOrNull()
-                                if (vehicle != null) {
+                                if (route != null) {
                                     RouteBadge(
-                                        vehicle = vehicle,
-                                        colorHex = route?.colorHex
-                                            ?: terminal?.colorHex
-                                            ?: "#9E9E9E",
+                                        vehicle = route.vehicle,
+                                        colorHex = route.colorHex,
                                         size = 36.dp,
                                     )
                                 } else {
@@ -134,7 +135,7 @@ fun DestinationSheet(
                                             .background(
                                                 Color(
                                                     parseHexColor(
-                                                        route?.colorHex ?: terminal?.colorHex,
+                                                        route?.colorHex,
                                                     ),
                                                 ),
                                             ),

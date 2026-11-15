@@ -5,24 +5,25 @@ data class TripEstimate(
     val terminal: Terminal,
     val roadKm: Double,
     val durationMinutes: Double,
-    val fare: Double,
+    /**
+     * The fare of this trip, scoped to the vehicle that carries it: a
+     * tricycle ride is priced from the published matrix, a bus ride is not
+     * priced at all, and an island trip prices only the tricycle leg to the
+     * port.
+     */
+    val fare: FareScope,
     val routePoints: List<RoutePoint>,
     val straightLineKm: Double,
     val distanceWarning: Boolean,
-    val fareSource: String,
     /** Set when the destination is offshore: boat ride required from the terminal. */
     val boatNote: String? = null,
-    /** Human-readable explanation of how the fare was obtained. */
-    val fareBasis: String = "",
-    /** True when the fare comes from the official fare matrix. */
-    val fareIsOfficial: Boolean = false,
     /** True when the 20% student / senior citizen / PWD fare was applied. */
     val fareDiscounted: Boolean = false,
     /** Matrix zone the passenger was detected in, when known. */
     val originZoneName: String? = null,
     /**
      * The transport route serving this destination: its colour (the colour of
-     * the vehicle to ask for) and, for bus routes, its stops.
+     * the vehicle to ask for) and its stops.
      */
     val route: Route? = null,
 )

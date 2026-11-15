@@ -50,9 +50,14 @@ public (`pk.`) and a secret downloads (`sk.`) token.
   terminal id resolves, that the 8 island destinations carry the boat flag,
   the 39 fare-matrix rows and 5 origins, the fare values (15 / 3 km / +2),
   and that colours are valid `#RRGGBB` codes.
-- `VehicleType` â€” the three routes and the vehicles boarding at each one,
-  the vehicle id round trip, `Terminal.serviceLabel`, and that an unknown
-  stored vehicle id is dropped instead of breaking the terminal.
+- `VehicleType` â€” the vehicles boarding at each terminal, the vehicle id
+  round trip, `Terminal.serviceLabel`, and that an unknown stored vehicle id is
+  dropped instead of breaking the terminal.
+- `Route` â€” route colours per route, the yellow corridor being a tricycle, white
+  reserved for the water routes, and every terminal matching the routes it boards.
+- `TripEstimator` â€” fare scoping per vehicle: the tricycle matrix fare and its
+  20% discount, an unverified bus fare, the island tricycle-to-port fare with an
+  unverified boat fare, and the distance estimate outside the matrix.
 
 ## Route colours and vehicles
 
@@ -144,6 +149,19 @@ The app therefore:
 Route labels in the published matrix are inconsistent, so lookups compare the
 label, the label without its parenthetical, and its last path segment
 ("BRGY. PARAISO/FABRICA" also matches a "BRGY. FABRICA" row).
+
+The fare is scoped to the vehicle that carries the trip, because the matrix
+prices **motorized tricycles** only:
+
+| Service | What the card shows |
+| --- | --- |
+| Tricycle / Reporm 2 | The matrix fare, or the distance estimate when the pair is not in the matrix |
+| Bus | **Fare not verified** â€” road distance and time are still shown |
+| Island / reef | The **tricycle fare to the port**, plus **Boat fare not verified** |
+| No known route | **Fare not verified** â€” local public-transport details need confirmation |
+
+A verified land fare is never combined with an unpublished bus or boat fare
+into a single total, and the 20% toggle applies to the matrix fares only.
 
 ## Building
 

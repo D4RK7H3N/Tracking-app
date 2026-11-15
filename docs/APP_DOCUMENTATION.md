@@ -42,13 +42,16 @@ Result preserved across rotation (landscape):
    dot for their serving terminal. Type in the search box to filter by name or
    category (e.g. "School", "Beach").
 4. **Select a destination.** The app fetches a road route and shows a result
-   card: distance (km), duration (min), estimated fare (₱), the serving terminal
-   and its colour, and the fare basis.
+   card: distance (km), duration (min), the fare for the vehicle that carries
+   the trip, its colour, and the fare basis.
 5. **Read the result.**
    - Island/reef destinations show a **boat note** ("Boat ride required from
      <terminal>") — the road leg ends at the port, not offshore.
    - A **distance warning** appears if the road distance looks implausible
      compared to straight-line (see §7).
+   - The fare describes the vehicle that carries the trip: a tricycle fare,
+     an unverified bus fare, or the tricycle-to-port fare plus an unverified
+     boat fare (see §8).
 6. **Navigate the map.** Use the **+ / −** zoom buttons (left edge) and the teal
    **Locate Me** button (top-right) to recenter on your position.
 7. **Pick another.** "Select new destination" returns to the map/list.
@@ -67,7 +70,7 @@ Result preserved across rotation (landscape):
 - GPS positioning via Google fused location (single high-accuracy fix).
 - OpenStreetMap rendering via **osmdroid** (no map API key).
 - Road distance + duration + polyline via the public **OSRM** routing API.
-- Stepped fare estimate with a **₱20 cap** (see §8).
+- Stepped fare estimate with a **₱40 cap** (see §8).
 - Straight-line (Haversine) sanity check on road distance.
 - Offline persistence: bundled seed data + saved pending trips (Room/SQLite).
 - Rotation-safe UI state; responsive Locate Me; map zoom controls.
@@ -213,24 +216,44 @@ Every `destination.terminalId` must resolve to a `terminals[].id` (enforced by
 
 ## 8. Fare calculation
 
+The fare is scoped to the vehicle that carries the passenger. The published
+matrix (Resolution No. 2026-117) prices **motorized tricycles** only, so it
+is applied to tricycle and Reporm 2 rides and to nothing else.
+
+| Service | What the card shows |
+| --- | --- |
+| Tricycle / Reporm 2 | The matrix fare, or the distance estimate when the pair is not in the matrix |
+| Bus | **Fare not verified** — road distance and time are still shown |
+| Island / reef | The **tricycle fare to the port**, plus **Boat fare not verified** |
+| No known route | **Fare not verified** — local public-transport details need confirmation |
+
+A verified land fare is never combined with an unpublished bus or boat fare
+into a single total.
+
+### The tricycle matrix
+
+`FareMatrixLookup.find(matrix, originZone, destinationZone)` resolves the
+published fare when the detected origin zone and the destination's matrix
+route are in the same table. The published label is inconsistent, so lookups
+compare the label, the label without its parenthetical, and its last path
+segment ("BRGY. PARAISO/FABRICA" also matches a "BRGY. FABRICA" row).
+
+The 20% student / senior citizen / PWD fare is a toggle on the result card.
+It applies to the matrix fares only; the distance estimate keeps its single
+value, because no discounted estimate is published.
+
+### The distance fallback
+
 `FareCalculator.compute(rule, roadKm)`:
 
-```
+`
 raw = roadKm <= baseKm ? baseFare
                        : baseFare + ceil(roadKm - baseKm) * extraPerKm
 fare = maxFare == null ? raw : clamp(raw, baseFare, maxFare)
-```
+`
 
-Current rule: **₱15** for the first **3 km**, **+₱2 per started km** beyond
-(`ceil`), **capped at ₱20** (Sagay City Resolution No. 2026-117 working rule).
-
-| Road km | Raw | Charged |
-| --- | --- | --- |
-| 0–3 | 15 | ₱15 |
-| 3.1 / 4 | 17 | ₱17 |
-| 5 | 19 | ₱19 |
-| 5.5 / 6 | 21 | **₱20** (cap) |
-| 30.9 | 71 | **₱20** (cap) |
+Current rule: **₱15** for the first **3 km**, **+₱2 per started km**
+beyond (`ceil`), **capped at ₱40**.
 
 If the resolution's partial-km or ceiling wording differs, change only
 `FareCalculator.compute` and update `FareCalculatorTest`.
@@ -297,9 +320,11 @@ JVM unit tests (`:app:testDebugUnitTest`):
 
 | Test class | Covers |
 | --- | --- |
-| `FareCalculatorTest` | base/step boundaries, started-km `ceil`, large trips, and the ₱15–₱20 cap. |
+| `FareCalculatorTest` | base/step boundaries, started-km `ceil`, large trips, and the ₱15–₱40 cap. |
 | `HaversineTest` | known distances, zero distance, and the road-vs-straight-line warning rule. |
 | `SeedParserTest` | 3 terminals / 38 destinations (21 schools), terminal-id resolution, 8 boat flags, fare values + cap, `#RRGGBB` colours. |
+| `RouteTest` | Route colours per route, the yellow corridor being a tricycle, white reserved for the water routes, and each terminal matching its routes. |
+| `TripEstimatorTest` | Fare scoping per vehicle: tricycle matrix and discount, bus unverified, island tricycle-to-port plus an unverified boat fare. |
 
 ---
 
