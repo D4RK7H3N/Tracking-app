@@ -47,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sagay.touristnav.R
 import com.sagay.touristnav.domain.Haversine
 import com.sagay.touristnav.domain.models.Destination
+import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.RoutePoint
 import com.sagay.touristnav.domain.models.RouteStop
 import com.sagay.touristnav.domain.models.Terminal
@@ -107,7 +108,7 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             onAction = { launcher.launch(permissions) },
         )
 
-        is UiState.Locating -> CenterMessage("Finding your location…")
+        is UiState.Locating -> CenterMessage("Finding your location\u2026")
 
         is UiState.GpsError -> PermissionPrompt(
             title = "Location unavailable",
@@ -126,6 +127,7 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
                 DestinationSheet(
                     destinations = s.data.destinations,
                     terminals = s.data.terminals,
+                    routes = s.data.routes,
                     onSelect = viewModel::onDestinationSelected,
                     onShowTerminals = { showTerminals = true },
                 )
@@ -138,7 +140,7 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             routePoints = emptyList(),
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
-            bottomContent = { RouteProgressCard("Looking up the road route…") },
+            bottomContent = { RouteProgressCard("Looking up the road route\u2026") },
         )
 
         is UiState.FetchingRoute -> TripMap(
@@ -147,7 +149,7 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             routePoints = emptyList(),
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
-            bottomContent = { RouteProgressCard("Fetching road distance…") },
+            bottomContent = { RouteProgressCard("Fetching road distance\u2026") },
         )
 
         is UiState.WaitingForInternet -> TripMap(
@@ -181,8 +183,8 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             routePoints = s.trip.routePoints,
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
-            busStops = s.trip.busRoute?.stops.orEmpty(),
-            busColorHex = s.trip.busRoute?.colorHex ?: "#FFFFFF",
+            busStops = s.trip.route?.stops.orEmpty(),
+            busColorHex = s.trip.route?.colorHex ?: "#FFFFFF",
             bottomContent = {
                 TripDetailsCard(
                     trip = s.trip,
@@ -195,7 +197,8 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
 
     if (showTerminals) {
         TerminalLegendSheet(
-            terminals = terminalsInOrder(state),
+            routes = routesInOrder(state),
+            terminals = terminalsInOrder(state).associateBy { it.id },
             onDismiss = { showTerminals = false },
         )
     }
@@ -216,6 +219,20 @@ private fun terminalsInOrder(state: UiState): List<Terminal> {
         else -> emptyMap()
     }
     return terminals.values.sortedBy { it.id }
+}
+
+/** The routes of the current state, in the order a tourist meets them. */
+private fun routesInOrder(state: UiState): List<Route> {
+    val routes = when (state) {
+        is UiState.MapReady -> state.data.routes
+        is UiState.DestinationSelected -> state.data.routes
+        is UiState.FetchingRoute -> state.data.routes
+        is UiState.WaitingForInternet -> state.data.routes
+        is UiState.RouteError -> state.data.routes
+        is UiState.ResultShown -> state.data.routes
+        else -> emptyMap()
+    }
+    return routes.values.sortedBy { it.id }
 }
 
 @Composable
@@ -270,13 +287,16 @@ private fun TripMap(
                 )
                 mv.overlays.add(userMarker(mv, context, position.lat, position.lng))
                 data.destinations.forEach { destination ->
+                    val route = data.routes[destination.routeId]
                     val terminal = data.terminals[destination.terminalId]
                     mv.overlays.add(
                         destinationMarker(
                             mapView = mv,
                             context = context,
                             destination = destination,
-                            color = parseHexColor(terminal?.colorHex),
+                            color = parseHexColor(
+                                route?.colorHex ?: terminal?.colorHex,
+                            ),
                             isSelected = selected?.id == destination.id,
                         ),
                     )
@@ -363,7 +383,7 @@ private fun ZoomControls(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        ZoomButton(label = "−", contentDescription = "Zoom out", onClick = onZoomOut)
+        ZoomButton(label = "-", contentDescription = "Zoom out", onClick = onZoomOut)
         ZoomButton(label = "+", contentDescription = "Zoom in", onClick = onZoomIn)
     }
 }
@@ -417,10 +437,50 @@ private fun userMarker(
 ): Marker =
     Marker(mapView).apply {
         position = GeoPoint(lat, lng)
-        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        icon = circleIcon(context, SagayColors.UserBlue.toArgb(), USER_RADIUS_DP)
+        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        icon = pinIcon(context, SagayColors.UserBlue.toArgb(), USER_RADIUS_DP)
         title = "You are here"
     }
+
+/**
+ * A locator pin: the teardrop that says "this is a place", with the route
+ * colour inside it so the map reads at a glance.
+ */
+private fun pinIcon(
+    context: Context,
+    color: Int,
+    sizeDp: Float,
+    strokeColor: Int = android.graphics.Color.WHITE,
+): BitmapDrawable {
+    val density = context.resources.displayMetrics.density
+    val width = (sizeDp * density).toInt().coerceAtLeast(12)
+    val height = (width * 1.35f).toInt()
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val cx = width / 2f
+    val headRadius = width / 2f - 2f * density
+    val headCy = headRadius + 2f * density
+    val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
+    // Teardrop: a circle head with two straight sides down to the tip.
+    val path = android.graphics.Path().apply {
+        moveTo(cx - headRadius * 0.92f, headCy + headRadius * 0.55f)
+        lineTo(cx, height - 2f * density)
+        lineTo(cx + headRadius * 0.92f, headCy + headRadius * 0.55f)
+        close()
+    }
+    canvas.drawPath(path, fill)
+    canvas.drawCircle(cx, headCy, headRadius, fill)
+    val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = strokeColor
+        style = Paint.Style.STROKE
+        strokeWidth = 2f * density
+    }
+    canvas.drawCircle(cx, headCy, headRadius, stroke)
+    // The hole in the middle of the pin.
+    val hole = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = android.graphics.Color.WHITE }
+    canvas.drawCircle(cx, headCy, headRadius * 0.38f, hole)
+    return BitmapDrawable(context.resources, bitmap)
+}
 
 private fun destinationMarker(
     mapView: MapView,
@@ -431,12 +491,16 @@ private fun destinationMarker(
 ): Marker =
     Marker(mapView).apply {
         position = GeoPoint(destination.lat, destination.lng)
-        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        icon = circleIcon(
+        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        icon = pinIcon(
             context = context,
             color = color,
             sizeDp = if (isSelected) SELECTED_RADIUS_DP else UNSELECTED_RADIUS_DP,
-            strokeColor = if (isSelected) SagayColors.SunriseDeep.toArgb() else android.graphics.Color.WHITE,
+            strokeColor = if (isSelected) {
+                SagayColors.SunriseDeep.toArgb()
+            } else {
+                android.graphics.Color.WHITE
+            },
         )
         title = destination.name
     }

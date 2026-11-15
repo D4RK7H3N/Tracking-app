@@ -3,7 +3,7 @@ package com.sagay.touristnav.di
 import android.content.Context
 import androidx.room.Room
 import com.sagay.touristnav.data.local.AppDatabase
-import com.sagay.touristnav.data.local.dao.BusRouteDao
+import com.sagay.touristnav.data.local.dao.RouteDao
 import com.sagay.touristnav.data.local.dao.DestinationDao
 import com.sagay.touristnav.data.local.dao.FareMatrixDao
 import com.sagay.touristnav.data.local.dao.FareOriginDao
@@ -30,6 +30,7 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_3_4,
                 AppDatabase.MIGRATION_4_5,
                 AppDatabase.MIGRATION_5_6,
+                AppDatabase.MIGRATION_6_7,
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -53,5 +54,5 @@ object DatabaseModule {
     fun provideFareOriginDao(db: AppDatabase): FareOriginDao = db.fareOriginDao()
 
     @Provides
-    fun provideBusRouteDao(db: AppDatabase): BusRouteDao = db.busRouteDao()
+    fun provideRouteDao(db: AppDatabase): RouteDao = db.routeDao()
 }

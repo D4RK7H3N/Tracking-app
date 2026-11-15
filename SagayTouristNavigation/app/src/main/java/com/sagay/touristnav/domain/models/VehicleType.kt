@@ -11,15 +11,18 @@ enum class VehicleType(val id: String, val displayName: String) {
     /** Jeepney / bus. */
     BUS("bus", "Bus"),
 
-    /** Motorcycle with a sidecar: the common tricycle. */
+    /**
+     * Motorcycle with a sidecar: the common tricycle. It runs the Poblacion
+     * rides and the yellow Sagay City - Old Sagay corridor.
+     */
     TRICYCLE("tricycle", "Tricycle"),
 
     /**
      * The Reporm 2, the motorized tricycle body used across Negros
-     * Occidental. Drawn separately because it has a motorcycle front and an
-     * open passenger side, unlike the closed three-wheeler of [TRICYCLE].
+     * Occidental: a motorcycle with an open passenger sidecar. It is neither
+     * the closed tricycle nor a bus, so it is announced on its own.
      */
-    REPORM_2_TRICYCLE("reporm2", "Reporm 2 Tricycle"),
+    REPORM_2("reporm2", "Reporm 2"),
 
     /** Outrigger boat for the offshore islands and reefs. */
     BOAT("boat", "Boat");

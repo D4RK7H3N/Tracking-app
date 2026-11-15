@@ -39,7 +39,7 @@ object SagayIcons {
     fun drawableFor(vehicle: VehicleType): Int = when (vehicle) {
         VehicleType.BUS -> R.drawable.ic_directions_bus
         VehicleType.TRICYCLE -> R.drawable.ic_electric_rickshaw
-        VehicleType.REPORM_2_TRICYCLE -> R.drawable.ic_tricycle_reporm2
+        VehicleType.REPORM_2 -> R.drawable.ic_tricycle_reporm2
         VehicleType.BOAT -> R.drawable.ic_directions_boat
     }
 }
@@ -81,7 +81,7 @@ fun RouteBadge(
     size: Dp = 40.dp,
 ) {
     val routeColor = Color(parseHexColor(colorHex))
-    val ink = if (routeColor.luminance() > 0.5f) SagayColors.TextDark else Color.White
+    val ink = contrastingInk(routeColor)
     val needsBorder = routeColor.luminance() > 0.9f
     Box(
         modifier = modifier
@@ -102,6 +102,43 @@ fun RouteBadge(
             tint = ink,
         )
     }
+}
+
+/**
+ * Picks the glyph colour that is readable on [background].
+ *
+ * A route can be white or yellow, which are unreadable under a white glyph,
+ * so the ink is chosen by WCAG contrast ratio rather than by eye: white wins
+ * on dark routes, near-black on light ones.
+ */
+private fun contrastingInk(background: Color): Color {
+    val white = Color.White
+    val dark = SagayColors.TextDark
+    return if (contrastRatio(background, white) >= contrastRatio(background, dark)) {
+        white
+    } else {
+        dark
+    }
+}
+
+/** WCAG relative luminance. */
+private fun relativeLuminance(color: Color): Double {
+    fun channel(value: Float): Double {
+        val v = value.toDouble()
+        return if (v <= 0.03928) v / 12.92 else Math.pow((v + 0.055) / 1.055, 2.4)
+    }
+    return 0.2126 * channel(color.red) +
+        0.7152 * channel(color.green) +
+        0.0722 * channel(color.blue)
+}
+
+/** WCAG contrast ratio, from 1 (identical) to 21 (black on white). */
+private fun contrastRatio(a: Color, b: Color): Double {
+    val la = relativeLuminance(a)
+    val lb = relativeLuminance(b)
+    val lighter = maxOf(la, lb)
+    val darker = minOf(la, lb)
+    return (lighter + 0.05) / (darker + 0.05)
 }
 
 /**

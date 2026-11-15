@@ -1,6 +1,7 @@
 package com.sagay.touristnav.ui
 
 import com.sagay.touristnav.domain.models.Destination
+import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.Terminal
 import com.sagay.touristnav.domain.models.TripEstimate
 import com.sagay.touristnav.platform.LocationFix
@@ -13,6 +14,8 @@ data class MapData(
     val position: LocationFix,
     val destinations: List<Destination>,
     val terminals: Map<String, Terminal>,
+    /** Transport routes by id: the colour of the vehicle to ask for. */
+    val routes: Map<String, Route> = emptyMap(),
 )
 
 /**

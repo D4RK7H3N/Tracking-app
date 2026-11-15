@@ -4,7 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.sagay.touristnav.data.local.dao.BusRouteDao
+import com.sagay.touristnav.data.local.dao.RouteDao
 import com.sagay.touristnav.data.local.dao.DestinationDao
 import com.sagay.touristnav.data.local.dao.FareMatrixDao
 import com.sagay.touristnav.data.local.dao.FareOriginDao
@@ -20,10 +20,10 @@ import com.sagay.touristnav.data.local.dao.TripStateDao
         TripStateEntity::class,
         FareMatrixEntity::class,
         FareOriginEntity::class,
-        BusRouteEntity::class,
-        BusRouteStopEntity::class,
+        RouteEntity::class,
+        RouteStopEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,7 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tripStateDao(): TripStateDao
     abstract fun fareMatrixDao(): FareMatrixDao
     abstract fun fareOriginDao(): FareOriginDao
-    abstract fun busRouteDao(): BusRouteDao
+    abstract fun routeDao(): RouteDao
 
     companion object {
         val MIGRATION_2_3 = object : Migration(2, 3) {
@@ -100,6 +100,39 @@ abstract class AppDatabase : RoomDatabase() {
                         "`lng` REAL NOT NULL, " +
                         "PRIMARY KEY(`routeId`, `stopOrder`))",
                 )
+            }
+        }
+
+        /**
+         * Generalises the bus routes into routes: a route owns the colour of
+         * its vehicle, so one terminal can board several colours. The old
+         * bus-only tables are dropped; the bundled seed re-inserts the
+         * routes, so nothing is copied over from the legacy tables.
+         */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `route` (" +
+                        "`id` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`terminalId` TEXT NOT NULL, " +
+                        "`colorHex` TEXT NOT NULL, " +
+                        "`colorName` TEXT NOT NULL, " +
+                        "`vehicle` TEXT NOT NULL, " +
+                        "PRIMARY KEY(`id`))",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `route_stop` (" +
+                        "`routeId` TEXT NOT NULL, " +
+                        "`stopOrder` INTEGER NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`lat` REAL NOT NULL, " +
+                        "`lng` REAL NOT NULL, " +
+                        "PRIMARY KEY(`routeId`, `stopOrder`))",
+                )
+                db.execSQL("DROP TABLE IF EXISTS `bus_route`")
+                db.execSQL("DROP TABLE IF EXISTS `bus_route_stop`")
+                db.execSQL("ALTER TABLE `destination` ADD COLUMN `routeId` TEXT")
             }
         }
     }

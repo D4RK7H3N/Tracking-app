@@ -1,4 +1,4 @@
-﻿package com.sagay.touristnav.ui
+package com.sagay.touristnav.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,7 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sagay.touristnav.R
-import com.sagay.touristnav.domain.models.BusRoute
+import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.Terminal
 import com.sagay.touristnav.domain.models.TripEstimate
 import java.util.Locale
@@ -40,7 +40,7 @@ import kotlin.math.roundToInt
 /**
  * V4 result card: the sunrise gradient strip answers the two questions
  * tourists ask first (how far, how much) with icons, and the details below
- * tell them **which vehicle to board** â€” the part a text-only card never
+ * tell them **which vehicle to board** ? the part a text-only card never
  * answered.
  */
 @Composable
@@ -91,7 +91,7 @@ fun TripDetailsCard(
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        String.format(Locale.US, "â‚±%.0f", trip.fare),
+                        String.format(Locale.US, "\u20B1%.0f", trip.fare),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Black,
                         color = Color.White,
@@ -137,10 +137,10 @@ fun TripDetailsCard(
                 )
             }
             Spacer(Modifier.height(14.dp))
-            TerminalRow(trip.terminal)
-            if (trip.busRoute != null && trip.busRoute.stops.size > 1) {
+            RouteRow(trip)
+            if (trip.route != null && trip.route.stops.size > 1) {
                 Spacer(Modifier.height(12.dp))
-                BusStopsBlock(trip.busRoute)
+                RouteStopsBlock(trip.route)
             }
             if (trip.originZoneName != null) {
                 Spacer(Modifier.height(10.dp))
@@ -190,11 +190,59 @@ fun TripDetailsCard(
 }
 
 /**
- * The stops of a bus / jeepney route. Tricycle trips have no stops, so the
- * block only appears for bus services.
+ * The board here: the colour of the vehicle to ask for, its type, and where
+ * to catch it. The colour belongs to the route, not to the terminal, because
+ * one terminal can board several colours.
  */
 @Composable
-private fun BusStopsBlock(route: BusRoute) {
+private fun RouteRow(trip: TripEstimate) {
+    val route = trip.route
+    val colorHex = route?.colorHex ?: trip.terminal.colorHex
+    val vehicle = route?.vehicle
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (vehicle != null) {
+            RouteBadge(
+                vehicle = vehicle,
+                colorHex = colorHex,
+                size = 40.dp,
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(parseHexColor(colorHex))),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                route?.serviceLabel ?: trip.terminal.colorName,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                trip.terminal.name,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (route != null && trip.terminal.serviceArea.isNotBlank()) {
+                Text(
+                    trip.terminal.serviceArea,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The stops of a route. A direct ride has none, so the block only appears
+ * for the services that pass through the owner-supplied waypoints.
+ */
+@Composable
+private fun RouteStopsBlock(route: Route) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -204,7 +252,7 @@ private fun BusStopsBlock(route: BusRoute) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                painter = painterResource(R.drawable.ic_directions_bus),
+                painter = painterResource(SagayIcons.drawableFor(route.vehicle)),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp),
@@ -249,48 +297,8 @@ private fun BusStopsBlock(route: BusRoute) {
 
 /**
  * The board here: the vehicle badge in the route colour, the terminal name,
- * and the service description ("Red Tricycle", "White Bus + Boat").
+ * and the service description ("Red Tricycle", "Yellow Tricycle").
  */
-@Composable
-private fun TerminalRow(terminal: Terminal) {
-    val vehicle = terminal.vehicles.firstOrNull()
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        if (vehicle != null) {
-            RouteBadge(
-                vehicle = vehicle,
-                colorHex = terminal.colorHex,
-                size = 40.dp,
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color(parseHexColor(terminal.colorHex))),
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                terminal.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                terminal.serviceLabel,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (terminal.serviceArea.isNotBlank()) {
-                Text(
-                    terminal.serviceArea,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
 
 /** One line of the gradient banner: an icon and its value. */
 @Composable
@@ -347,7 +355,7 @@ private fun DiscountToggle(
         ) {
             if (checked) {
                 Text(
-                    "âœ“",
+                    "\u2713",
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,

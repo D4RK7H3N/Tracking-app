@@ -1,6 +1,6 @@
 package com.sagay.touristnav.data.repo
 
-import com.sagay.touristnav.data.local.dao.BusRouteDao
+import com.sagay.touristnav.data.local.dao.RouteDao
 import com.sagay.touristnav.data.local.dao.DestinationDao
 import com.sagay.touristnav.data.local.dao.FareMatrixDao
 import com.sagay.touristnav.data.local.dao.FareOriginDao
@@ -13,7 +13,7 @@ import com.sagay.touristnav.data.remote.DirectionsApi
 import com.sagay.touristnav.data.remote.RouteException
 import com.sagay.touristnav.domain.Haversine
 import com.sagay.touristnav.domain.TripEstimator
-import com.sagay.touristnav.domain.models.BusRoute
+import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.FareMatrixEntry
 import com.sagay.touristnav.domain.models.FareOrigin
@@ -37,7 +37,7 @@ class TripRepository @Inject constructor(
     private val tripStateDao: TripStateDao,
     private val fareMatrixDao: FareMatrixDao,
     private val fareOriginDao: FareOriginDao,
-    private val busRouteDao: BusRouteDao,
+    private val routeDao: RouteDao,
     private val estimator: TripEstimator,
     connectivityObserver: ConnectivityObserver,
 ) {
@@ -112,10 +112,10 @@ class TripRepository @Inject constructor(
             destination = destination,
             terminal = terminal,
             fareRule = rule,
-            route = resolvedRoute,
+            roadRoute = resolvedRoute,
             matrixEntries = fareMatrix(),
             fareOrigins = fareOrigins(),
-            busRoutes = busRoutes(),
+            routes = routes(),
             discounted = discounted,
         )
     }
@@ -126,10 +126,10 @@ class TripRepository @Inject constructor(
     suspend fun fareOrigins(): List<FareOrigin> =
         fareOriginDao.getAll().map { it.toDomain() }
 
-    /** Bus / jeepney routes with their stops, in travel order. */
-    suspend fun busRoutes(): List<BusRoute> {
-        val stops = busRouteDao.getStops()
-        return busRouteDao.getRoutes().map { it.toDomain(stops) }
+    /** Transport routes with their stops, in travel order. */
+    suspend fun routes(): List<Route> {
+        val stops = routeDao.getStops()
+        return routeDao.getRoutes().map { it.toDomain(stops) }
     }
 
     suspend fun savePendingTrip(

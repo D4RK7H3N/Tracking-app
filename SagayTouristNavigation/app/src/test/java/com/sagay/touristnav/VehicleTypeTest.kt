@@ -49,18 +49,24 @@ class VehicleTypeTest {
     }
 
     @Test
-    fun `the three routes are red tricycle, yellow reporm 2 and white bus`() {
+    fun `the terminals board the vehicles of their routes`() {
         val terminals = SeedParser.parse(seed).terminals.associateBy { it.id }
         assertEquals(listOf("tricycle"), terminals.getValue("T1").vehicles)
-        assertEquals(listOf("reporm2", "boat"), terminals.getValue("T2").vehicles)
-        assertEquals(listOf("bus", "boat"), terminals.getValue("T3").vehicles)
+        assertEquals(
+            listOf("reporm2", "tricycle", "boat"),
+            terminals.getValue("T2").vehicles,
+        )
+        assertEquals(
+            listOf("tricycle", "bus", "boat"),
+            terminals.getValue("T3").vehicles,
+        )
         assertEquals("Red", terminals.getValue("T1").colorName)
-        assertEquals("Yellow", terminals.getValue("T2").colorName)
-        assertEquals("White", terminals.getValue("T3").colorName)
+        assertEquals("Pink", terminals.getValue("T2").colorName)
+        assertEquals("Yellow", terminals.getValue("T3").colorName)
     }
 
     @Test
-    fun `the old sagay route is named on the white bus terminal`() {
+    fun `the old sagay route is named on the old sagay port terminal`() {
         val terminals = SeedParser.parse(seed).terminals.associateBy { it.id }
         val area = terminals.getValue("T3").serviceArea
         assertTrue(area.contains("Old Sagay to Sagay City"))
@@ -68,15 +74,15 @@ class VehicleTypeTest {
     }
 
     @Test
-    fun `a terminal describes its service for the tourist`() {
-        assertEquals("Red Tricycle", terminal("T1", "Red", listOf(VehicleType.TRICYCLE)).serviceLabel)
+    fun `a terminal describes its vehicles for the tourist`() {
+        assertEquals("Tricycle", terminal("T1", "Red", listOf(VehicleType.TRICYCLE)).serviceLabel)
         assertEquals(
-            "Yellow Reporm 2 Tricycle",
-            terminal("T2", "Yellow", listOf(VehicleType.REPORM_2_TRICYCLE)).serviceLabel,
+            "Reporm 2 + Tricycle",
+            terminal("T2", "Pink", listOf(VehicleType.REPORM_2, VehicleType.TRICYCLE)).serviceLabel,
         )
         assertEquals(
-            "White Bus + Boat",
-            terminal("T3", "White", listOf(VehicleType.BUS, VehicleType.BOAT)).serviceLabel,
+            "Tricycle + Bus + Boat",
+            terminal("T3", "Yellow", listOf(VehicleType.TRICYCLE, VehicleType.BUS, VehicleType.BOAT)).serviceLabel,
         )
     }
 
@@ -98,7 +104,7 @@ class VehicleTypeTest {
             vehicles = "reporm2,boat",
         )
         assertEquals(
-            listOf(VehicleType.REPORM_2_TRICYCLE, VehicleType.BOAT),
+            listOf(VehicleType.REPORM_2, VehicleType.BOAT),
             entity.toDomain().vehicles,
         )
     }

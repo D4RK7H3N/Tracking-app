@@ -10,6 +10,6 @@ data class FareRuleEntity(
     val baseKm: Double,
     val extraPerKm: Double,
     val source: String,
-    /** Optional ceiling (₱): computed fares are clamped to this value. */
+    /** Optional ceiling (?): computed fares are clamped to this value. */
     val maxFare: Double?,
 )

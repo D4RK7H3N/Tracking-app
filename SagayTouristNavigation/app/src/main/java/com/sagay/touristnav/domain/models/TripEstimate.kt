@@ -21,8 +21,8 @@ data class TripEstimate(
     /** Matrix zone the passenger was detected in, when known. */
     val originZoneName: String? = null,
     /**
-     * Bus / jeepney route with its stops, when the trip is served by a bus
-     * rather than a direct tricycle ride.
+     * The transport route serving this destination: its colour (the colour of
+     * the vehicle to ask for) and, for bus routes, its stops.
      */
-    val busRoute: BusRoute? = null,
+    val route: Route? = null,
 )

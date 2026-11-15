@@ -18,19 +18,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.Terminal
 
 /**
- * The tourist cheat sheet: every terminal with its route colour, the vehicle
- * that boards there, and the areas it serves.
+ * The tourist cheat sheet: every route with the colour of the vehicle to ask
+ * for, where to catch it, and the stops it passes.
  *
- * This answers the question the map markers cannot — "which one is the red
+ * This answers the question the map markers cannot ? "which one is the red
  * one, and where do I catch it?".
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TerminalLegendSheet(
-    terminals: List<Terminal>,
+    routes: List<Route>,
+    terminals: Map<String, Terminal>,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -46,18 +48,18 @@ fun TerminalLegendSheet(
                 .padding(bottom = 28.dp),
         ) {
             Text(
-                "Terminals & routes",
+                "Routes & terminals",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                "Every service is known by its colour — ask for it by name.",
+                "Every service is known by its colour \u2014 ask for it by name.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))
-            terminals.forEach { terminal ->
-                TerminalLegendRow(terminal)
+            routes.forEach { route ->
+                RouteLegendRow(route, terminals[route.terminalId])
                 Spacer(Modifier.height(14.dp))
             }
         }
@@ -65,58 +67,40 @@ fun TerminalLegendSheet(
 }
 
 @Composable
-private fun TerminalLegendRow(terminal: Terminal) {
+private fun RouteLegendRow(route: Route, terminal: Terminal?) {
     Row(verticalAlignment = Alignment.Top) {
-        val vehicle = terminal.vehicles.firstOrNull()
-        if (vehicle != null) {
-            RouteBadge(
-                vehicle = vehicle,
-                colorHex = terminal.colorHex,
-                size = 44.dp,
-            )
-        } else {
-            Spacer(Modifier.size(44.dp))
-        }
+        RouteBadge(
+            vehicle = route.vehicle,
+            colorHex = route.colorHex,
+            size = 44.dp,
+        )
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                terminal.serviceLabel,
+                route.serviceLabel,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                terminal.name,
+                route.name,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (terminal.serviceArea.isNotBlank()) {
+            if (terminal != null) {
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    terminal.serviceArea,
+                    "Catch it at ${terminal.name}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            val extra = terminal.vehicles.drop(1)
-            if (extra.isNotEmpty()) {
+            if (route.stops.size > 1) {
                 Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    extra.forEach { other ->
-                        VehicleIcon(
-                            vehicle = other,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp),
-                            contentDescription = other.displayName,
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            other.displayName,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.width(10.dp))
-                    }
-                }
+                Text(
+                    "Stops: " + route.stops.joinToString(" \u2192 ") { it.name },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

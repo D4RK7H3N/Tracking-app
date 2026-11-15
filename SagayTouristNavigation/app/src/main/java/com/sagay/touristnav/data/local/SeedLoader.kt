@@ -50,6 +50,7 @@ class SeedLoader @Inject constructor(
                             terminalId = it.terminalId,
                             requiresBoat = it.boat,
                             fareZone = it.zone,
+                            routeId = it.routeId,
                         )
                     },
                 )
@@ -74,20 +75,24 @@ class SeedLoader @Inject constructor(
                         )
                     },
                 )
-                database.busRouteDao().insertRoutes(
-                    seed.busRoutes.map {
-                        BusRouteEntity(
+                database.routeDao().deleteAllStops()
+                database.routeDao().deleteAllRoutes()
+                database.routeDao().insertRoutes(
+                    seed.routes.map {
+                        RouteEntity(
                             id = it.id,
                             name = it.name,
                             terminalId = it.terminalId,
                             colorHex = it.colorHex,
+                            colorName = it.colorName,
+                            vehicle = it.vehicle,
                         )
                     },
                 )
-                database.busRouteDao().insertStops(
-                    seed.busRoutes.flatMap { route ->
+                database.routeDao().insertStops(
+                    seed.routes.flatMap { route ->
                         route.stops.mapIndexed { index, stop ->
-                            BusRouteStopEntity(
+                            RouteStopEntity(
                                 routeId = route.id,
                                 stopOrder = index,
                                 name = stop.name,

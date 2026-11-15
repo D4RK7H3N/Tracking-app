@@ -1,7 +1,7 @@
 package com.sagay.touristnav.data.local
 
-import com.sagay.touristnav.domain.models.BusRoute
 import com.sagay.touristnav.domain.models.Destination
+import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.FareMatrixEntry
 import com.sagay.touristnav.domain.models.FareOrigin
 import com.sagay.touristnav.domain.models.FareRule
@@ -32,6 +32,7 @@ fun DestinationEntity.toDomain(): Destination = Destination(
     terminalId = terminalId,
     requiresBoat = requiresBoat,
     fareZone = fareZone,
+    routeId = routeId,
 )
 
 fun FareRuleEntity.toDomain(): FareRule = FareRule(
@@ -58,11 +59,13 @@ fun FareOriginEntity.toDomain(): FareOrigin = FareOrigin(
     radiusKm = radiusKm,
 )
 
-fun BusRouteEntity.toDomain(stops: List<BusRouteStopEntity>): BusRoute = BusRoute(
+fun RouteEntity.toDomain(stops: List<RouteStopEntity>): Route = Route(
     id = id,
     name = name,
     terminalId = terminalId,
     colorHex = colorHex,
+    colorName = colorName,
+    vehicle = VehicleType.fromId(vehicle) ?: VehicleType.TRICYCLE,
     stops = stops
         .filter { it.routeId == id }
         .sortedBy { it.stopOrder }

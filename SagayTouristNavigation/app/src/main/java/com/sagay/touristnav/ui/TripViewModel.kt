@@ -130,7 +130,8 @@ class TripViewModel @Inject constructor(
                 seedLoader.seed()
                 val destinations = repository.destinations()
                 val terminals = repository.terminals().associateBy { it.id }
-                mapData = MapData(fix, destinations, terminals)
+                val routes = repository.routes().associateBy { it.id }
+                mapData = MapData(fix, destinations, terminals, routes)
                 dataLoaded = true
             } else {
                 mapData = mapData.copy(position = fix)

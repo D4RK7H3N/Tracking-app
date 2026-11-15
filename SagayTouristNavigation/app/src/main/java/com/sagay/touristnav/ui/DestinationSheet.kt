@@ -1,4 +1,4 @@
-﻿package com.sagay.touristnav.ui
+package com.sagay.touristnav.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,12 +42,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sagay.touristnav.R
 import com.sagay.touristnav.domain.models.Destination
+import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.Terminal
 
 @Composable
 fun DestinationSheet(
     destinations: List<Destination>,
     terminals: Map<String, Terminal>,
+    routes: Map<String, Route> = emptyMap(),
     onSelect: (Destination) -> Unit,
     onShowTerminals: () -> Unit,
 ) {
@@ -79,7 +81,7 @@ fun DestinationSheet(
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
                 singleLine = true,
-                placeholder = { Text("Search a destination or categoryâ€¦") },
+                placeholder = { Text("Search a destination or category\u2026") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -101,6 +103,7 @@ fun DestinationSheet(
                 ) {
                     items(filtered, key = { it.id }) { destination ->
                         val terminal = terminals[destination.terminalId]
+                        val route = routes[destination.routeId]
                         ListItem(
                             headlineContent = {
                                 Text(destination.name, fontWeight = FontWeight.SemiBold)
@@ -109,16 +112,18 @@ fun DestinationSheet(
                                 Text(
                                     listOfNotNull(
                                         destination.category,
-                                        terminal?.serviceLabel,
-                                    ).joinToString(" Â· "),
+                                        route?.serviceLabel ?: terminal?.serviceLabel,
+                                    ).joinToString(" \u00B7 "),
                                 )
                             },
                             leadingContent = {
-                                val vehicle = terminal?.vehicles?.firstOrNull()
+                                val vehicle = route?.vehicle ?: terminal?.vehicles?.firstOrNull()
                                 if (vehicle != null) {
                                     RouteBadge(
                                         vehicle = vehicle,
-                                        colorHex = terminal.colorHex,
+                                        colorHex = route?.colorHex
+                                            ?: terminal?.colorHex
+                                            ?: "#9E9E9E",
                                         size = 36.dp,
                                     )
                                 } else {
@@ -126,7 +131,13 @@ fun DestinationSheet(
                                         modifier = Modifier
                                             .size(20.dp)
                                             .clip(CircleShape)
-                                            .background(Color(parseHexColor(terminal?.colorHex))),
+                                            .background(
+                                                Color(
+                                                    parseHexColor(
+                                                        route?.colorHex ?: terminal?.colorHex,
+                                                    ),
+                                                ),
+                                            ),
                                     )
                                 }
                             },

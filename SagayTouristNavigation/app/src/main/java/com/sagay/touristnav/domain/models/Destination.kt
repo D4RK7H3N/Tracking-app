@@ -18,4 +18,9 @@ data class Destination(
      * (e.g. "BRGY. VITO"). Null when the destination is not on the matrix.
      */
     val fareZone: String? = null,
+    /**
+     * Transport route serving this destination (its colour and vehicle).
+     * Null when the destination is reached directly.
+     */
+    val routeId: String? = null,
 )

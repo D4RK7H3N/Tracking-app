@@ -1,6 +1,6 @@
 package com.sagay.touristnav.domain
 
-import com.sagay.touristnav.domain.models.BusRoute
+import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.FareMatrixEntry
 import com.sagay.touristnav.domain.models.FareOrigin
@@ -18,13 +18,12 @@ class TripEstimator @Inject constructor() {
         destination: Destination,
         terminal: Terminal,
         fareRule: FareRule,
-        route: RouteSummary,
+        roadRoute: RouteSummary,
         matrixEntries: List<FareMatrixEntry> = emptyList(),
         fareOrigins: List<FareOrigin> = emptyList(),
-        busRoutes: List<BusRoute> = emptyList(),
+        routes: List<Route> = emptyList(),
         discounted: Boolean = false,
-    ): TripEstimate {
-        // For island/reef destinations the road leg ends at the port terminal,
+    ): TripEstimate {        // For island/reef destinations the road leg ends at the port terminal,
         // so the sanity check must compare against that endpoint, not the
         // offshore point (which would falsely trigger the warning).
         val roadEndpointLat = if (destination.requiresBoat) terminal.lat else destination.lat
@@ -41,18 +40,18 @@ class TripEstimator @Inject constructor() {
         val fareIsOfficial: Boolean
         if (matrixEntry != null) {
             fare = if (discounted) matrixEntry.discountedFare else matrixEntry.regularFare
-            fareBasis = "Official fare matrix: ${origin?.name} → ${destination.fareZone}"
+            fareBasis = "Official fare matrix: ${origin?.name} \u2192 ${destination.fareZone}"
             fareIsOfficial = true
         } else {
-            fare = FareCalculator.compute(fareRule, route.roadKm)
+            fare = FareCalculator.compute(fareRule, roadRoute.roadKm)
             fareBasis = if (origin == null) {
                 "Estimated from road distance (outside the matrix areas): " +
-                    "₱${fareRule.baseFare.toInt()} first ${fareRule.baseKm.toInt()} km, " +
-                    "+₱${fareRule.extraPerKm.toInt()} per started km"
+                    "\u20B1${fareRule.baseFare.toInt()} first ${fareRule.baseKm.toInt()} km, " +
+                    "+\u20B1${fareRule.extraPerKm.toInt()} per started km"
             } else {
                 "Estimated from road distance (not in the ${origin.name} matrix): " +
-                    "₱${fareRule.baseFare.toInt()} first ${fareRule.baseKm.toInt()} km, " +
-                    "+₱${fareRule.extraPerKm.toInt()} per started km"
+                    "\u20B1${fareRule.baseFare.toInt()} first ${fareRule.baseKm.toInt()} km, " +
+                    "+\u20B1${fareRule.extraPerKm.toInt()} per started km"
             }
             fareIsOfficial = false
         }
@@ -60,12 +59,12 @@ class TripEstimator @Inject constructor() {
         return TripEstimate(
             destination = destination,
             terminal = terminal,
-            roadKm = route.roadKm,
-            durationMinutes = route.durationMinutes,
+            roadKm = roadRoute.roadKm,
+            durationMinutes = roadRoute.durationMinutes,
             fare = fare,
-            routePoints = route.points,
+            routePoints = roadRoute.points,
             straightLineKm = straightLineKm,
-            distanceWarning = Haversine.isRoadDistanceSuspicious(route.roadKm, straightLineKm),
+            distanceWarning = Haversine.isRoadDistanceSuspicious(roadRoute.roadKm, straightLineKm),
             fareSource = fareRule.source,
             boatNote = if (destination.requiresBoat) {
                 "Boat ride required from ${terminal.name}"
@@ -76,9 +75,9 @@ class TripEstimator @Inject constructor() {
             fareIsOfficial = fareIsOfficial,
             fareDiscounted = discounted,
             originZoneName = origin?.name,
-            // A terminal that boards a bus gets its bus route (with stops);
-            // tricycle terminals are direct point-to-point rides.
-            busRoute = busRoutes.firstOrNull { it.terminalId == terminal.id },
+            // The destination names the route it is served by; the route
+            // carries the colour, the vehicle and the stops.
+            route = routes.firstOrNull { it.id == destination.routeId },
         )
     }
 }
