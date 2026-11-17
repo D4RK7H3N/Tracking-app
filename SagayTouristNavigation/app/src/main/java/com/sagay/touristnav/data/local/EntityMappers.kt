@@ -2,6 +2,7 @@ package com.sagay.touristnav.data.local
 
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.Route
+import com.sagay.touristnav.domain.models.RouteAccess
 import com.sagay.touristnav.domain.models.FareMatrixEntry
 import com.sagay.touristnav.domain.models.FareOrigin
 import com.sagay.touristnav.domain.models.FareRule
@@ -70,4 +71,12 @@ fun RouteEntity.toDomain(stops: List<RouteStopEntity>): Route = Route(
         .filter { it.routeId == id }
         .sortedBy { it.stopOrder }
         .map { RouteStop(order = it.stopOrder, name = it.name, lat = it.lat, lng = it.lng) },
+)
+
+fun RouteAccessEntity.toDomain(): RouteAccess = RouteAccess(
+    originZone = originZone,
+    destinationRouteId = destinationRouteId,
+    viaRouteId = viaRouteId,
+    changeAt = changeAt,
+    fareZone = fareZone,
 )

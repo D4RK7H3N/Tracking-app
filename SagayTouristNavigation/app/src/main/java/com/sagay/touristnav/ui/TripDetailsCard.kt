@@ -31,6 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sagay.touristnav.R
+import com.sagay.touristnav.domain.FareFormat
 import com.sagay.touristnav.domain.models.FareScope
 import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.Terminal
@@ -47,6 +48,7 @@ import kotlin.math.roundToInt
 @Composable
 fun TripDetailsCard(
     trip: TripEstimate,
+    terminals: Map<String, Terminal>,
     onSelectNew: () -> Unit,
     onToggleDiscount: () -> Unit,
 ) {
@@ -138,10 +140,12 @@ fun TripDetailsCard(
                 )
             }
             Spacer(Modifier.height(14.dp))
-            RouteRow(trip)
-            if (trip.route != null && trip.route.stops.size > 1) {
-                Spacer(Modifier.height(12.dp))
-                RouteStopsBlock(trip.route)
+            JourneyRow(trip, terminals)
+            trip.stopService?.let { stopsService ->
+                if (stopsService.stops.size > 1) {
+                    Spacer(Modifier.height(12.dp))
+                    RouteStopsBlock(stopsService)
+                }
             }
             if (trip.originZoneName != null) {
                 Spacer(Modifier.height(10.dp))
@@ -160,7 +164,7 @@ fun TripDetailsCard(
             }
             Spacer(Modifier.height(4.dp))
             FareBasisBlock(fare = trip.fare)
-            if (trip.fare is FareScope.MotorizedTricycle || trip.fare is FareScope.Island) {
+            if (trip.fare.canDiscount) {
                 Spacer(Modifier.height(10.dp))
                 DiscountToggle(
                     checked = trip.fareDiscounted,
@@ -187,15 +191,78 @@ fun TripDetailsCard(
  * The board here: the colour of the vehicle to ask for, its type, and where
  * to catch it. The colour belongs to the route, not to the terminal, because
  * one terminal can board several colours.
+ *
+ * Most journeys are one service. The Old Sagay to Sagay City corridor needs
+ * two: the yellow tricycle carries the passenger into the city and the red
+ * tricycle serves the destination there, so both are listed with the point
+ * where the passenger changes.
  */
 @Composable
-private fun RouteRow(trip: TripEstimate) {
-    val route = trip.route
-    val vehicle = route?.vehicle
+private fun JourneyRow(trip: TripEstimate, terminals: Map<String, Terminal>) {
+    val services = trip.services
+    if (services.size > 1) {
+        Column {
+            services.forEachIndexed { index, route ->
+                if (index > 0) {
+                    ChangePointRow(trip.changeAt)
+                }
+                val serviceTerminal = terminals[route.terminalId]
+                    ?: trip.terminal.takeIf { route.id == trip.route?.id }
+                ServiceRow(
+                    route = route,
+                    terminal = serviceTerminal,
+                    showArea = index == services.lastIndex,
+                )
+            }
+        }
+    } else {
+        ServiceRow(
+            route = services.firstOrNull(),
+            terminal = trip.terminal,
+            showArea = true,
+        )
+    }
+}
+
+/**
+ * Where the passenger changes service between two routes.
+ */
+@Composable
+private fun ChangePointRow(changeAt: String?) {
+    Row(
+        modifier = Modifier.padding(start = 20.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_route),
+            contentDescription = null,
+            tint = SagayColors.TealPrimary,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            changeAt?.let { "Change at $it" } ?: "Change service",
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = SagayColors.TealPrimary,
+        )
+    }
+}
+
+/**
+ * One service of the journey: its badge, how it is announced, and the
+ * terminal it boards at.
+ */
+@Composable
+private fun ServiceRow(
+    route: Route?,
+    terminal: Terminal?,
+    showArea: Boolean,
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        if (vehicle != null) {
+        if (route != null) {
             RouteBadge(
-                vehicle = vehicle,
+                vehicle = route.vehicle,
                 colorHex = route.colorHex,
                 size = 40.dp,
             )
@@ -216,14 +283,16 @@ private fun RouteRow(trip: TripEstimate) {
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(
-                trip.terminal.name,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (route != null && trip.terminal.serviceArea.isNotBlank()) {
+            if (terminal != null) {
                 Text(
-                    trip.terminal.serviceArea,
+                    terminal.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (showArea && terminal != null && terminal.serviceArea.isNotBlank()) {
+                Text(
+                    terminal.serviceArea,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -324,8 +393,8 @@ private fun BannerLine(iconRes: Int, text: String) {
  * fare is not verified rather than a tricycle fare that does not apply.
  */
 private fun fareHeadline(fare: FareScope): String = when (fare) {
-    is FareScope.MotorizedTricycle -> String.format(Locale.US, "\u20B1%.0f", fare.amount)
-    is FareScope.Island -> String.format(Locale.US, "\u20B1%.0f", fare.tricycleToPort.amount)
+    is FareScope.MotorizedTricycle -> FareFormat.peso(fare.amount)
+    is FareScope.Island -> FareFormat.peso(fare.tricycleToPort.amount)
     FareScope.Bus -> "Not verified"
     FareScope.Unverified -> "Not verified"
 }

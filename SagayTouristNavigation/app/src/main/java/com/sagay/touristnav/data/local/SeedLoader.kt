@@ -77,6 +77,18 @@ class SeedLoader @Inject constructor(
                 )
                 database.routeDao().deleteAllStops()
                 database.routeDao().deleteAllRoutes()
+                database.routeAccessDao().deleteAll()
+                database.routeAccessDao().insertAll(
+                    seed.routeAccess.map {
+                        RouteAccessEntity(
+                            originZone = it.originZone,
+                            destinationRouteId = it.destinationRouteId,
+                            viaRouteId = it.viaRouteId,
+                            changeAt = it.changeAt,
+                            fareZone = it.fareZone,
+                        )
+                    },
+                )
                 database.routeDao().insertRoutes(
                     seed.routes.map {
                         RouteEntity(

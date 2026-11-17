@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sagay.touristnav.data.local.dao.RouteDao
+import com.sagay.touristnav.data.local.dao.RouteAccessDao
 import com.sagay.touristnav.data.local.dao.DestinationDao
 import com.sagay.touristnav.data.local.dao.FareMatrixDao
 import com.sagay.touristnav.data.local.dao.FareOriginDao
@@ -22,8 +23,9 @@ import com.sagay.touristnav.data.local.dao.TripStateDao
         FareOriginEntity::class,
         RouteEntity::class,
         RouteStopEntity::class,
+        RouteAccessEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -34,6 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun fareMatrixDao(): FareMatrixDao
     abstract fun fareOriginDao(): FareOriginDao
     abstract fun routeDao(): RouteDao
+    abstract fun routeAccessDao(): RouteAccessDao
 
     companion object {
         val MIGRATION_2_3 = object : Migration(2, 3) {
@@ -133,6 +136,26 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("DROP TABLE IF EXISTS `bus_route`")
                 db.execSQL("DROP TABLE IF EXISTS `bus_route_stop`")
                 db.execSQL("ALTER TABLE `destination` ADD COLUMN `routeId` TEXT")
+            }
+        }
+
+        /**
+         * Adds the owner-supplied access rules that state which service is
+         * ridden first to reach another one, and where the passenger changes.
+         * The bundled seed re-inserts the rows, so nothing is copied over
+         * from a legacy table.
+         */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `route_access` (" +
+                        "`originZone` TEXT NOT NULL, " +
+                        "`destinationRouteId` TEXT NOT NULL, " +
+                        "`viaRouteId` TEXT NOT NULL, " +
+                        "`changeAt` TEXT NOT NULL, " +
+                        "`fareZone` TEXT NOT NULL, " +
+                        "PRIMARY KEY(`originZone`, `destinationRouteId`))",
+                )
             }
         }
     }

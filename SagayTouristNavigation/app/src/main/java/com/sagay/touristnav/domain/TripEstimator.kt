@@ -6,6 +6,7 @@ import com.sagay.touristnav.domain.models.FareMatrixEntry
 import com.sagay.touristnav.domain.models.FareOrigin
 import com.sagay.touristnav.domain.models.FareRule
 import com.sagay.touristnav.domain.models.FareScope
+import com.sagay.touristnav.domain.models.RouteAccess
 import com.sagay.touristnav.domain.models.RouteSummary
 import com.sagay.touristnav.domain.models.Terminal
 import com.sagay.touristnav.domain.models.TripEstimate
@@ -24,6 +25,7 @@ class TripEstimator @Inject constructor() {
         matrixEntries: List<FareMatrixEntry> = emptyList(),
         fareOrigins: List<FareOrigin> = emptyList(),
         routes: List<Route> = emptyList(),
+        routeAccess: List<RouteAccess> = emptyList(),
         discounted: Boolean = false,
     ): TripEstimate {
         // For island/reef destinations the road leg ends at the port terminal,
@@ -34,22 +36,41 @@ class TripEstimator @Inject constructor() {
         val straightLineKm = Haversine.km(originLat, originLng, roadEndpointLat, roadEndpointLng)
 
         val origin = FareZoneDetector.detect(originLat, originLng, fareOrigins)
+
+        // The destination names the route it is served by. The route carries
+        // the colour, the vehicle and the stops.
+        val destinationRoute = routes.firstOrNull { it.id == destination.routeId }
+
+        // Some corridors need two services: the passenger rides one route to
+        // the area the other serves. The rule is owner-supplied and states
+        // which route is ridden first and where the passenger changes.
+        val access = accessRule(origin, destinationRoute, routeAccess, routes)
+        val viaRoute = access?.let { rule -> routes.firstOrNull { it.id == rule.viaRouteId } }
+        val services = when {
+            viaRoute != null && destinationRoute != null && viaRoute.id != destinationRoute.id ->
+                listOf(viaRoute, destinationRoute)
+            else -> listOfNotNull(destinationRoute)
+        }
+        val changeAt = if (services.size > 1) access?.changeAt else null
+
+        // The whole journey is one tricycle journey, so it is priced as one
+        // fare against the corridor, not as two legs added together.
+        val fareZone = if (services.size > 1) access?.fareZone else destination.fareZone
         val matrixEntry = origin?.let {
-            FareMatrixLookup.find(matrixEntries, it.zone, destination.fareZone.orEmpty())
+            FareMatrixLookup.find(matrixEntries, it.zone, fareZone.orEmpty())
         }
 
         // The route decides which vehicle carries the passenger, and the
         // vehicle decides which fare rules apply: the published matrix covers
         // motorized tricycles only.
-        val route = routes.firstOrNull { it.id == destination.routeId }
         val fare = fareScope(
-            vehicle = route?.vehicle,
+            vehicle = destinationRoute?.vehicle,
             requiresBoat = destination.requiresBoat,
             origin = origin,
             matrixEntry = matrixEntry,
             fareRule = fareRule,
             roadKm = roadRoute.roadKm,
-            destinationZone = destination.fareZone,
+            destinationZone = fareZone,
             discounted = discounted,
         )
 
@@ -69,10 +90,31 @@ class TripEstimator @Inject constructor() {
             },
             fareDiscounted = discounted,
             originZoneName = origin?.name,
-            // The destination names the route it is served by; the route
-            // carries the colour, the vehicle and the stops.
-            route = route,
+            services = services,
+            changeAt = changeAt,
         )
+    }
+
+    /**
+     * The access rule that applies to this trip, or null when there is none.
+     *
+     * A rule whose via route is not in the seed is ignored, so a stale rule
+     * cannot invent a service the app does not know.
+     */
+    private fun accessRule(
+        origin: FareOrigin?,
+        destinationRoute: Route?,
+        routeAccess: List<RouteAccess>,
+        routes: List<Route>,
+    ): RouteAccess? {
+        if (origin == null || destinationRoute == null) return null
+        val rule = routeAccess.firstOrNull {
+            it.originZone.equals(origin.zone, ignoreCase = true) &&
+                it.destinationRouteId.equals(destinationRoute.id, ignoreCase = true)
+        } ?: return null
+        return rule.takeIf { candidate ->
+            routes.any { it.id.equals(candidate.viaRouteId, ignoreCase = true) }
+        }
     }
 
     /**

@@ -61,13 +61,58 @@ class SeedParserTest {
     @Test
     fun `the official fare matrix and its origins are bundled`() {
         val file = SeedParser.parse(seed)
-        assertEquals(39, file.fareMatrix.size)
+        assertEquals(40, file.fareMatrix.size)
         assertEquals(5, file.fareOrigins.size)
         // Five origin tables: City Proper, Crossing Vito, Paraiso, Old Sagay, Bato.
         assertEquals(
             setOf("CITY_PROPER", "CROSSING_VITO", "PARAISO", "OLD_SAGAY", "BATO"),
             file.fareMatrix.map { it.origin }.toSet(),
         )
+    }
+
+    @Test
+    fun `the Old Sagay to Sagay City corridor fare is bundled`() {
+        val file = SeedParser.parse(seed)
+        val row = file.fareMatrix.firstOrNull {
+            it.origin == "OLD_SAGAY" && it.destination == "SAGAY CITY"
+        }
+        assertTrue("expected the OLD_SAGAY -> SAGAY CITY matrix row", row != null)
+        assertEquals(20.0, row!!.regular, 0.001)
+        assertEquals(16.0, row.discounted, 0.001)
+    }
+
+    @Test
+    fun `the corridor access rule is bundled and names known routes`() {
+        val file = SeedParser.parse(seed)
+        assertEquals(1, file.routeAccess.size)
+        val rule = file.routeAccess.first()
+        assertEquals("OLD_SAGAY", rule.originZone)
+        assertEquals("R-POPLACION", rule.destinationRouteId)
+        assertEquals("R-OLD-SAGAY", rule.viaRouteId)
+        assertEquals("Sagay City Bus Terminal (Poblacion)", rule.changeAt)
+        assertEquals("SAGAY CITY", rule.fareZone)
+
+        val routeIds = file.routes.map { it.id }.toSet()
+        assertTrue(
+            "access rule names an unknown route ${rule.viaRouteId}",
+            rule.viaRouteId in routeIds,
+        )
+        assertTrue(
+            "access rule names an unknown route ${rule.destinationRouteId}",
+            rule.destinationRouteId in routeIds,
+        )
+    }
+
+    @Test
+    fun `the corridor fare zone is a bundled matrix destination`() {
+        val file = SeedParser.parse(seed)
+        val destinations = file.fareMatrix.map { it.destination }.toSet()
+        file.routeAccess.forEach { rule ->
+            assertTrue(
+                "access rule prices against unknown matrix route ${rule.fareZone}",
+                rule.fareZone in destinations,
+            )
+        }
     }
 
     @Test

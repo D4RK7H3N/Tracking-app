@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.sagay.touristnav.data.local.AppDatabase
 import com.sagay.touristnav.data.local.dao.RouteDao
+import com.sagay.touristnav.data.local.dao.RouteAccessDao
 import com.sagay.touristnav.data.local.dao.DestinationDao
 import com.sagay.touristnav.data.local.dao.FareMatrixDao
 import com.sagay.touristnav.data.local.dao.FareOriginDao
@@ -31,6 +32,7 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_4_5,
                 AppDatabase.MIGRATION_5_6,
                 AppDatabase.MIGRATION_6_7,
+                AppDatabase.MIGRATION_7_8,
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -55,4 +57,7 @@ object DatabaseModule {
 
     @Provides
     fun provideRouteDao(db: AppDatabase): RouteDao = db.routeDao()
+
+    @Provides
+    fun provideRouteAccessDao(db: AppDatabase): RouteAccessDao = db.routeAccessDao()
 }

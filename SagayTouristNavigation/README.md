@@ -26,7 +26,7 @@ Negros Occidental, Philippines.
 ## API keys
 
 **None needed.** Map tiles come from OpenStreetMap (via osmdroid) and routing
-from the OSRM public demo server â€” both keyless. If you later move routing to
+from the OSRM public demo server — both keyless. If you later move routing to
 Mapbox Directions, you will need a Mapbox account with billing and both a
 public (`pk.`) and a secret downloads (`sk.`) token.
 
@@ -36,28 +36,33 @@ public (`pk.`) and a secret downloads (`sk.`) token.
 .\gradlew.bat :app:testDebugUnitTest
 ```
 
-- `FareCalculator` â€” 0 km, exactly 3 km, 3.1 km, the 4.0 km step boundary,
+- `FareCalculator` — 0 km, exactly 3 km, 3.1 km, the 4.0 km step boundary,
   4.01 km, 5 km, a large 12 km trip, and the fallback cap (short trips keep
   base/step fares, long trips clamp to the ceiling).
-- `Haversine` â€” known Sagay-area distances, zero distance, and the road-vs-
+- `Haversine` — known Sagay-area distances, zero distance, and the road-vs-
   straight-line warning rule in both directions.
-- `FareMatrix` â€” origin-zone detection (City Proper, Crossing Vito, Paraiso,
+- `FareMatrix` — origin-zone detection (City Proper, Crossing Vito, Paraiso,
   Old Sagay, Bato), matrix look-ups per origin table, the published label
-  variations ("SAN AGUSTIN" vs "SAN AGUSTIN (PROPER)"), and the 15â€“40 peso
+  variations ("SAN AGUSTIN" vs "SAN AGUSTIN (PROPER)"), and the 15“40 peso
   range of every published route.
-- `SeedParser` â€” parses the bundled `seed.json` into 3 terminals and
+- `SeedParser` — parses the bundled `seed.json` into 3 terminals and
   38 destinations (21 of them schools), checks that every destination's
   terminal id resolves, that the 8 island destinations carry the boat flag,
-  the 39 fare-matrix rows and 5 origins, the fare values (15 / 3 km / +2),
-  and that colours are valid `#RRGGBB` codes.
-- `VehicleType` â€” the vehicles boarding at each terminal, the vehicle id
+  the 40 fare-matrix rows and 5 origins, the fare values (15 / 3 km / +2),
+  that colours are valid `#RRGGBB` codes, and that the Old Sagay to Sagay
+  City corridor row and access rule are bundled and name known routes.
+- `VehicleType` — the vehicles boarding at each terminal, the vehicle id
   round trip, `Terminal.serviceLabel`, and that an unknown stored vehicle id is
   dropped instead of breaking the terminal.
-- `Route` â€” route colours per route, the yellow corridor being a tricycle, white
+- `Route` — route colours per route, the yellow corridor being a tricycle, white
   reserved for the water routes, and every terminal matching the routes it boards.
-- `TripEstimator` â€” fare scoping per vehicle: the tricycle matrix fare and its
+- `FareFormat` — published fares print as published: a whole peso amount stays
+  whole and an amount with centavos keeps them.
+- `TripEstimator` — fare scoping per vehicle: the tricycle matrix fare and its
   20% discount, an unverified bus fare, the island tricycle-to-port fare with an
-  unverified boat fare, and the distance estimate outside the matrix.
+  unverified boat fare, and the distance estimate outside the matrix. It also
+  covers the Old Sagay to Sagay City corridor journey, its single fare, and a
+  stale access rule being ignored.
 
 ## Route colours and vehicles
 
@@ -117,8 +122,8 @@ for `ic_my_location.xml`.
 
 Material Icons are Apache-2.0 licensed and every generated drawable carries
 an attribution comment. `ic_tricycle_reporm2.xml` is hand-drawn for this
-project â€” the Reporm 2 has a motorcycle front and an open passenger side,
-unlike Material's closed `electric_rickshaw` â€” so the two tricycle services
+project — the Reporm 2 has a motorcycle front and an open passenger side,
+unlike Material's closed `electric_rickshaw` — so the two tricycle services
 are told apart at a glance.
 
 ## The official fare matrix (Resolution No. 2026-117)
@@ -127,11 +132,11 @@ The city publishes **flat fares per route**, not a distance formula:
 
 | Origin table | Routes | Range |
 | --- | --- | --- |
-| City Proper (Poblacion) | 27 | â‚±15 â€“ â‚±40 |
-| Crossing Vito | 2 | â‚±15 â€“ â‚±23 |
-| Paraiso | 6 | â‚±15 â€“ â‚±33 |
+| City Proper (Poblacion) | 27 | â‚±15 “ â‚±40 |
+| Crossing Vito | 2 | â‚±15 “ â‚±23 |
+| Paraiso | 6 | â‚±15 “ â‚±33 |
 | Brgy. Old Sagay | 1 | â‚±15 |
-| Brgy. Bato | 3 | â‚±17 â€“ â‚±25 |
+| Brgy. Bato | 3 | â‚±17 “ â‚±25 |
 
 The app therefore:
 
@@ -156,12 +161,45 @@ prices **motorized tricycles** only:
 | Service | What the card shows |
 | --- | --- |
 | Tricycle / Reporm 2 | The matrix fare, or the distance estimate when the pair is not in the matrix |
-| Bus | **Fare not verified** â€” road distance and time are still shown |
+| Bus | **Fare not verified** — road distance and time are still shown |
 | Island / reef | The **tricycle fare to the port**, plus **Boat fare not verified** |
-| No known route | **Fare not verified** â€” local public-transport details need confirmation |
+| No known route | **Fare not verified** — local public-transport details need confirmation |
 
 A verified land fare is never combined with an unpublished bus or boat fare
-into a single total, and the 20% toggle applies to the matrix fares only.
+into a single total.
+
+The 20% toggle is offered only for an official matrix fare. The distance
+estimate keeps its single value, because no discounted estimate is
+published, so a toggle there would promise something the card cannot
+deliver. Published amounts are printed as published: a whole peso amount
+stays whole and an amount with centavos keeps them (₱13.60, not ₱14).
+
+## Old Sagay to Sagay City needs two services
+
+Standing in Old Sagay and heading into Sagay City, the passenger rides the
+**Yellow Tricycle** into the city and then the **Red Tricycle** to the
+destination. The result card lists both with the point where the passenger
+changes, and the map draws the Yellow route's stops, which include that
+point.
+
+The rule is owner-supplied and lives in the seed, so it can be corrected
+without a code change:
+
+```json
+"route_access": [{
+  "originZone": "OLD_SAGAY",
+  "destinationRouteId": "R-POPLACION",
+  "viaRouteId": "R-OLD-SAGAY",
+  "changeAt": "Sagay City Bus Terminal (Poblacion)",
+  "fareZone": "SAGAY CITY"
+}]
+```
+
+The two services are one tricycle journey, so they are priced as one fare
+and never added together. The `fareZone` names the matrix row that prices
+it (`OLD_SAGAY` -> `SAGAY CITY`, ₱20 regular and ₱16
+discounted). A rule naming a route the app does not know is ignored, so a
+stale rule cannot invent a service.
 
 ## Building
 
@@ -170,14 +208,14 @@ into a single total, and the 20% toggle applies to the matrix fares only.
 ```
 
 `gradle.properties` (gitignored) may pin a machine-local JDK with
-`org.gradle.java.home` (Gradle 8.10.2 needs JDK 17â€“21; Android Studio's JBR
-works â€” see `gradle.properties.example`).
+`org.gradle.java.home` (Gradle 8.10.2 needs JDK 17“21; Android Studio's JBR
+works — see `gradle.properties.example`).
 
 ## Island destinations need a boat
 
 Carbin Reef, Suyac Island, Molocaboc Island, Panal Reef and Macahulom Reef
 are offshore. For these the app routes the **road leg to the serving port
-terminal** (Old Sagay Port or Vito) â€” the driving profile cannot cross water â€”
+terminal** (Old Sagay Port or Vito) — the driving profile cannot cross water —
 and the result card shows *"Boat ride required from âŸ¨terminalâŸ©"*. The fare
 covers the road leg to the port only.
 
@@ -209,22 +247,22 @@ are stored in travel order.
    Reporm 2 / tricycle / bus, yellow tricycle, white boat) were supplied by the
    app owner; the coordinates were researched from public sources. Verify all
    of it with the Sagay City Tourism Office / LTFRB-franchised operators.
-2. **Destinations** â€” `assets/seed.json` -> `destinations[]`. 38 entries
+2. **Destinations** — `assets/seed.json` -> `destinations[]`. 38 entries
    (tourist spots + 21 DepEd schools from the OSM/Overpass data and the
    DepEd Division of Sagay City directory); coordinates from PhilAtlas /
    OSM / Wikipedia. Verify on site.
-3. **Fare values** â€” `assets/seed.json` -> `fare_rule` (the distance fallback:
+3. **Fare values** — `assets/seed.json` -> `fare_rule` (the distance fallback:
    `baseFare=15`, `baseKm=3`, `extraPerKm=2`, `maxFare=40`, source
    "Sagay City Resolution No. 2026-117") and `fare_matrix` / `fare_origins`
    (the 39 published routes and the 5 origin zones, including the 20%
-   student / senior / PWD fares). The matrix is the city's temporary order â€”
+   student / senior / PWD fares). The matrix is the city's temporary order —
    replace both when the official schedules are published.
-4. **Fare rounding rule** â€” `domain/FareCalculator.kt` uses
+4. **Fare rounding rule** — `domain/FareCalculator.kt` uses
    `ceil(roadKm - baseKm) * extraPerKm` (one step per **started** kilometer)
    for the fallback only, clamped to `maxFare`. If Resolution No. 2026-117
    specifies a different partial-kilometer or ceiling rule,
    change that one function and update `FareCalculatorTest`.
-5. **Destination â†’ matrix route** â€” `assets/seed.json` -> `destinations[].zone`
+5. **Destination â†’ matrix route** — `assets/seed.json` -> `destinations[].zone`
    maps each destination to a matrix route (e.g. "BRGY. VITO"). It was derived
    from OpenStreetMap coordinates and nearest-route matching; confirm with the
    city government.

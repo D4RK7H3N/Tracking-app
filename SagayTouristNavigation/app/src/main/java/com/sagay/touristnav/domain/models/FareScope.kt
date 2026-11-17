@@ -12,6 +12,21 @@ package com.sagay.touristnav.domain.models
 sealed interface FareScope {
 
     /**
+     * True when the published 20% student / senior citizen / PWD fare applies
+     * to this fare.
+     *
+     * Only the official matrix publishes a discounted fare, so a distance
+     * estimate keeps its single value and the discount must not be offered
+     * for it.
+     */
+    val canDiscount: Boolean
+        get() = when (this) {
+            is MotorizedTricycle -> isOfficial
+            is Island -> tricycleToPort.isOfficial
+            Bus, Unverified -> false
+        }
+
+    /**
      * A tricycle or Reporm 2 ride: the whole trip is one motorized tricycle
      * journey, so the published tricycle fare applies to it.
      */

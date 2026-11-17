@@ -22,8 +22,24 @@ data class TripEstimate(
     /** Matrix zone the passenger was detected in, when known. */
     val originZoneName: String? = null,
     /**
-     * The transport route serving this destination: its colour (the colour of
-     * the vehicle to ask for) and its stops.
+     * The services to board, in the order the passenger boards them. Most
+     * trips need one; the Old Sagay to Sagay City corridor needs the yellow
+     * tricycle into the city and then the red tricycle to the destination.
      */
-    val route: Route? = null,
-)
+    val services: List<Route> = emptyList(),
+    /** Where the passenger changes service, when the journey needs one. */
+    val changeAt: String? = null,
+) {
+    /**
+     * The transport route serving the destination: its colour (the colour of
+     * the vehicle to ask for) and its stops. It is the last service of the
+     * journey.
+     */
+    val route: Route? get() = services.lastOrNull()
+
+    /**
+     * The service whose owner-supplied stops are shown, or null when no
+     * service has any.
+     */
+    val stopService: Route? get() = services.firstOrNull { it.stops.isNotEmpty() }
+}

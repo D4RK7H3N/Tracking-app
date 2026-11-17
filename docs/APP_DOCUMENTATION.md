@@ -108,7 +108,7 @@ di/          AppModule, DatabaseModule, NetworkModule (Hilt)
 | `FareCalculator` | Pure stepped-fare formula with cap. |
 | `Haversine` | Great-circle distance + road-distance sanity check. |
 | `SeedLoader` | Mutex-guarded, once-per-process upsert of bundled `seed.json`. |
-| `AppDatabase` | Room v3; migration 2→3 preserves `trip_state`. |
+| `AppDatabase` | Room v8; migration 7→8 adds the owner-supplied `route_access` table. |
 | `LocationProvider` | One high-accuracy fused fix, `null` on any failure. |
 | `ConnectivityObserver` | `callbackFlow` of validated-internet availability. |
 
@@ -151,7 +151,7 @@ NeedsPermission ──grant──> Locating ──fix──> MapReady
 
 ## 6. Data model & persistence
 
-Room database `sagay_tourist_nav.db`, **version 3**.
+Room database `sagay_tourist_nav.db`, **version 8**.
 
 | Entity | Table | Notes |
 | --- | --- | --- |
@@ -159,6 +159,11 @@ Room database `sagay_tourist_nav.db`, **version 3**.
 | `DestinationEntity` | `destination` | id, name, category, lat/lng, `terminalId`, `requiresBoat`. |
 | `FareRuleEntity` | `fare_rule` | id, `baseFare`, `baseKm`, `extraPerKm`, `source`, `maxFare` (nullable). |
 | `TripStateEntity` | `trip_state` | origin lat/lng, `destinationId`, `status`, `savedAt`. |
+| `FareMatrixEntity` | `fare_matrix` | origin zone, destination zone, `regularFare`, `discountedFare`. |
+| `FareOriginEntity` | `fare_origin` | zone, name, lat/lng, `radiusKm`. |
+| `RouteEntity` | `route` | id, name, `terminalId`, `colorHex`, `colorName`, `vehicle`. |
+| `RouteStopEntity` | `route_stop` | `routeId`, `stopOrder`, name, lat/lng. |
+| `RouteAccessEntity` | `route_access` | `originZone`, `destinationRouteId`, `viaRouteId`, `changeAt`, `fareZone`. |
 
 `TripStateEntity.status`: `PENDING_ROUTE` (saved, awaiting connectivity) →
 `DONE` (route fetched).
@@ -167,10 +172,14 @@ Room database `sagay_tourist_nav.db`, **version 3**.
 `SeedLoader.seed()` runs once per process under a mutex and **upserts**
 (`OnConflictStrategy.REPLACE`) terminals, destinations, and the fare rule.
 Editing `seed.json` therefore applies on the next app restart **without**
-clearing app data, and never touches `trip_state`.
+clearing app data, and never touches `trip_state`. The routes, their stops, the
+fare matrix and the access rules are upserted the same way.
 
 **Migrations.** `MIGRATION_2_3` adds `fare_rule.maxFare` via
-`ALTER TABLE … ADD COLUMN`, preserving existing rows (including saved trips).
+`ALTER TABLE … ADD COLUMN`, preserving existing rows (including saved trips). `MIGRATION_3_4` adds the fare
+matrix and its origins, `MIGRATION_6_7` generalises the bus routes into routes,
+and `MIGRATION_7_8` adds the `route_access` table. Every migration keeps the
+saved trips.
 `fallbackToDestructiveMigration()` remains only as a last resort for unknown
 future schema jumps.
 
@@ -188,7 +197,19 @@ future schema jumps.
       "lat": 10.978, "lng": 123.4648, "terminalId": "T3", "boat": true }
   ],
   "fare_rule": { "id": 1, "baseFare": 15, "baseKm": 3, "extraPerKm": 2,
-                 "source": "Sagay City Resolution No. 2026-117", "maxFare": 20 }
+                 "source": "Sagay City Resolution No. 2026-117", "maxFare": 40 },
+  "fare_origins": [ { "zone": "OLD_SAGAY", "name": "Brgy. Old Sagay",
+                      "lat": 10.94691, "lng": 123.426, "radiusKm": 2.5 } ],
+  "fare_matrix": [ { "origin": "OLD_SAGAY", "destination": "SAGAY CITY",
+                     "regular": 20, "discounted": 16 } ],
+  "routes": [ { "id": "R-OLD-SAGAY", "name": "Sagay City - Old Sagay Port",
+                "terminalId": "T3", "colorHex": "#F9A825", "colorName": "Yellow",
+                "vehicle": "tricycle", "stops": [] } ],
+  "route_access": [ { "originZone": "OLD_SAGAY",
+                      "destinationRouteId": "R-POPLACION",
+                      "viaRouteId": "R-OLD-SAGAY",
+                      "changeAt": "Sagay City Bus Terminal (Poblacion)",
+                      "fareZone": "SAGAY CITY" } ]
 }
 ```
 
@@ -230,6 +251,21 @@ is applied to tricycle and Reporm 2 rides and to nothing else.
 A verified land fare is never combined with an unpublished bus or boat fare
 into a single total.
 
+### The Old Sagay to Sagay City corridor
+
+Some corridors need two services. The yellow tricycle carries the passenger
+from Old Sagay into Sagay City, and the red tricycle serves the destination
+there, so the result card lists both with the point where the passenger
+changes. The rule is owner-supplied and lives in `seed.json` as a
+`route_access` row: it names the origin zone, the destination route, the
+route ridden first, the change point, and the matrix destination the whole
+journey is priced against.
+
+The two services are one tricycle journey, so they are priced as one fare
+(`OLD_SAGAY` -> `SAGAY CITY`, ₱20 / ₱16) and never added
+together. A rule naming a route the app does not know is ignored, so a stale
+rule cannot invent a service.
+
 ### The tricycle matrix
 
 `FareMatrixLookup.find(matrix, originZone, destinationZone)` resolves the
@@ -239,8 +275,13 @@ compare the label, the label without its parenthetical, and its last path
 segment ("BRGY. PARAISO/FABRICA" also matches a "BRGY. FABRICA" row).
 
 The 20% student / senior citizen / PWD fare is a toggle on the result card.
-It applies to the matrix fares only; the distance estimate keeps its single
-value, because no discounted estimate is published.
+It is offered only for an official matrix fare, because the distance
+estimate keeps its single value: no discounted estimate is published, so a
+toggle there would promise something the card cannot deliver.
+
+Published amounts are printed as published: a whole peso amount stays whole
+and an amount with centavos keeps them (₱13.60, not ₱14).
+`FareFormat.peso` does this.
 
 ### The distance fallback
 
@@ -322,9 +363,10 @@ JVM unit tests (`:app:testDebugUnitTest`):
 | --- | --- |
 | `FareCalculatorTest` | base/step boundaries, started-km `ceil`, large trips, and the ₱15–₱40 cap. |
 | `HaversineTest` | known distances, zero distance, and the road-vs-straight-line warning rule. |
-| `SeedParserTest` | 3 terminals / 38 destinations (21 schools), terminal-id resolution, 8 boat flags, fare values + cap, `#RRGGBB` colours. |
+| `SeedParserTest` | 3 terminals / 38 destinations (21 schools), terminal-id resolution, 8 boat flags, fare values + cap, `#RRGGBB` colours, the corridor matrix row and the access rule. |
 | `RouteTest` | Route colours per route, the yellow corridor being a tricycle, white reserved for the water routes, and each terminal matching its routes. |
-| `TripEstimatorTest` | Fare scoping per vehicle: tricycle matrix and discount, bus unverified, island tricycle-to-port plus an unverified boat fare. |
+| `FareFormatTest` | Published fares print as published: whole pesos stay whole, centavos are kept. |
+| `TripEstimatorTest` | Fare scoping per vehicle: tricycle matrix and discount, bus unverified, island tricycle-to-port plus an unverified boat fare, the Old Sagay to Sagay City corridor journey and its single fare, and a stale access rule being ignored. |
 
 ---
 
@@ -379,6 +421,8 @@ network calls are OSRM routing and OpenStreetMap tile fetches.
   self-hosted OSRM / OpenRouteService before wide release.
 - Island/reef results price only the road leg to the port; the boat ride is not
   priced and no boat schedule is provided.
+- The Old Sagay to Sagay City corridor rule and its ₱20 fare are
+  owner-supplied and pending confirmation with the Sagay City Tourism Office.
 - Offline mode saves the trip but cannot compute a road route until connectivity
   returns.
 - Debug build only; not signed for store distribution.

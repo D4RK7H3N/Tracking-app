@@ -1,6 +1,7 @@
 package com.sagay.touristnav.data.repo
 
 import com.sagay.touristnav.data.local.dao.RouteDao
+import com.sagay.touristnav.data.local.dao.RouteAccessDao
 import com.sagay.touristnav.data.local.dao.DestinationDao
 import com.sagay.touristnav.data.local.dao.FareMatrixDao
 import com.sagay.touristnav.data.local.dao.FareOriginDao
@@ -14,6 +15,7 @@ import com.sagay.touristnav.data.remote.RouteException
 import com.sagay.touristnav.domain.Haversine
 import com.sagay.touristnav.domain.TripEstimator
 import com.sagay.touristnav.domain.models.Route
+import com.sagay.touristnav.domain.models.RouteAccess
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.FareMatrixEntry
 import com.sagay.touristnav.domain.models.FareOrigin
@@ -38,6 +40,7 @@ class TripRepository @Inject constructor(
     private val fareMatrixDao: FareMatrixDao,
     private val fareOriginDao: FareOriginDao,
     private val routeDao: RouteDao,
+    private val routeAccessDao: RouteAccessDao,
     private val estimator: TripEstimator,
     connectivityObserver: ConnectivityObserver,
 ) {
@@ -116,6 +119,7 @@ class TripRepository @Inject constructor(
             matrixEntries = fareMatrix(),
             fareOrigins = fareOrigins(),
             routes = routes(),
+            routeAccess = routeAccess(),
             discounted = discounted,
         )
     }
@@ -125,6 +129,10 @@ class TripRepository @Inject constructor(
 
     suspend fun fareOrigins(): List<FareOrigin> =
         fareOriginDao.getAll().map { it.toDomain() }
+
+    /** The owner-supplied rules for reaching a service from another area. */
+    suspend fun routeAccess(): List<RouteAccess> =
+        routeAccessDao.getAll().map { it.toDomain() }
 
     /** Transport routes with their stops, in travel order. */
     suspend fun routes(): List<Route> {

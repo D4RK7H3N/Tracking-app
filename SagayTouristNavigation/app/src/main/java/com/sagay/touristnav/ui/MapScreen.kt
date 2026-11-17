@@ -183,11 +183,12 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             routePoints = s.trip.routePoints,
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
-            busStops = s.trip.route?.stops.orEmpty(),
-            busColorHex = s.trip.route?.colorHex ?: "#FFFFFF",
+            busStops = s.trip.stopService?.stops.orEmpty(),
+            busColorHex = s.trip.stopService?.colorHex ?: "#FFFFFF",
             bottomContent = {
                 TripDetailsCard(
                     trip = s.trip,
+                    terminals = s.data.terminals,
                     onSelectNew = viewModel::selectNewDestination,
                     onToggleDiscount = viewModel::toggleDiscount,
                 )
