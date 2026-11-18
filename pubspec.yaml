@@ -1,7 +1,7 @@
 name: sagay_tourist_navigator
 description: "Offline-first tourist navigator for Sagay City, Negros Occidental, Philippines. Shows GPS location, road distance, estimated tricycle fare, and the colour-coded terminal serving each destination."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ^3.12.2
@@ -16,6 +16,7 @@ dependencies:
   latlong2: ^0.10.1
   provider: ^6.1.5+1
   shared_preferences: ^2.3.5
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -62,6 +63,7 @@ import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.RoutePoint
 import com.sagay.touristnav.domain.models.RouteStop
 import com.sagay.touristnav.domain.models.Terminal
+import com.sagay.touristnav.platform.OfflineMapPack
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -82,6 +84,7 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
     val context = LocalContext.current
     var showTerminals by rememberSaveable { mutableStateOf(false) }
     var showHistory by rememberSaveable { mutableStateOf(false) }
+    var showOfflinePack by rememberSaveable { mutableStateOf(false) }
 
     val permissions = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -137,6 +140,7 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
             onShowHistory = { showHistory = true },
+            onShowOfflinePack = { showOfflinePack = true },
             bottomContent = {
                 DestinationSheet(
                     destinations = s.data.destinations,
@@ -231,6 +235,10 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
         )
     }
 
+    if (showOfflinePack) {
+        OfflinePackSheet(onDismiss = { showOfflinePack = false })
+    }
+
     if (showHistory) {
         HistorySheet(
             viewModel = viewModel,
@@ -288,6 +296,7 @@ private fun TripMap(
     busStops: List<RouteStop> = emptyList(),
     busColorHex: String = "#FFFFFF",
     onShowHistory: () -> Unit = {},
+    onShowOfflinePack: () -> Unit = {},
     bottomContent: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -348,6 +357,7 @@ private fun TripMap(
             factory = {
                 mapView.apply {
                     setTileSource(TileSourceFactory.MAPNIK)
+                    OfflineMapPack(context).activate(this)
                     setMultiTouchControls(true)
                     controller.setZoom(13.5)
                     controller.setCenter(GeoPoint(position.lat, position.lng))
@@ -410,6 +420,18 @@ private fun TripMap(
                 mv.invalidate()
             },
         )
+        FloatingActionButton(
+            onClick = onShowOfflinePack,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(top = 16.dp, end = 136.dp),
+            containerColor = androidx.compose.ui.graphics.Color.White,
+            contentColor = SagayColors.TealPrimary,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        ) {
+            Icon(Icons.Default.Download, contentDescription = "Offline map")
+        }
         FloatingActionButton(
             onClick = onShowHistory,
             modifier = Modifier

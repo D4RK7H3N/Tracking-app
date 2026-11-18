@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "name": "Sagay City",
+  "bbox": {
+    "south": 10.78,
+    "west": 123.34,
+    "north": 10.99,
+    "east": 123.58
+  },
+  "zoom": {
+    "min": 12,
+    "max": 14
+  },
+  "tileUrl": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  "note": "Bounded city area, zoom 12-14. The default tile server is for small-scale use only; replace tileUrl with a provider that permits offline packs before distributing widely."
+}

@@ -7,12 +7,14 @@ import 'package:provider/provider.dart';
 import '../models/app_data.dart';
 import '../models/destination.dart';
 import '../services/location_service.dart' show LocationStatus;
+import '../services/offline_map_pack.dart';
 import '../services/trip_store.dart';
 import '../state/app_state.dart';
 import '../theme/motion.dart';
 import '../widgets/compass_indicator.dart';
 import '../widgets/motion_button.dart';
 import 'history_screen.dart';
+import 'offline_map_screen.dart';
 import 'result_screen.dart';
 
 /// Home screen: a full-screen map with the user's position and destination
@@ -75,6 +77,16 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Sagay Tourist Navigator'),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.map_outlined),
+            tooltip: 'Offline map pack',
+            onPressed: () => Navigator.of(context).push(
+              SagayPageRoute<void>(
+                context: context,
+                child: const OfflineMapScreen(),
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'Trip history',
@@ -166,6 +178,7 @@ class _MapWithSheetState extends State<_MapWithSheet>
   bool _mapReady = false;
   Position? _lastCenteredPosition;
   Set<String> _favorites = <String>{};
+  String? _localTilePattern;
 
   @override
   void initState() {
@@ -174,6 +187,9 @@ class _MapWithSheetState extends State<_MapWithSheet>
     _zoomController.addListener(_applyZoom);
     context.read<TripStore>().favorites().then((values) {
       if (mounted) setState(() => _favorites = values);
+    });
+    OfflineMapPack().localTilePattern().then((pattern) {
+      if (mounted) setState(() => _localTilePattern = pattern);
     });
   }
 
@@ -254,7 +270,11 @@ class _MapWithSheetState extends State<_MapWithSheet>
           ),
           children: [
             TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate: _localTilePattern ??
+                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              tileProvider: _localTilePattern == null
+                  ? NetworkTileProvider()
+                  : FileTileProvider(),
               userAgentPackageName: 'ph.sagay.sagay_tourist_navigator',
             ),
             MarkerLayer(markers: _buildMarkers(position)),
