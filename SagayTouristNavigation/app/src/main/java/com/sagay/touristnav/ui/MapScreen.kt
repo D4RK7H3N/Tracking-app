@@ -213,6 +213,9 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
                     onToggleDiscount = viewModel::toggleDiscount,
                     onSaveTrip = { viewModel.saveCurrentTrip() },
                     onStartGuidance = viewModel::startGuidance,
+                    passengers = viewModel.passengerCount(),
+                    onChangePassengers = viewModel::setPassengers,
+                    onShare = { shareText(context, viewModel.currentShareText()) },
                 )
             },
         )

@@ -13,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -23,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,6 +36,7 @@ fun HistorySheet(
     onDismiss: () -> Unit,
 ) {
     val records by viewModel.history.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val total = records.sumOf { it.total }
     val mostUsed = records
@@ -116,6 +119,9 @@ fun HistorySheet(
                             }
                         }
                     }
+                }
+                OutlinedButton(onClick = { shareText(context, viewModel.historyCsv()) }) {
+                    Text("Export CSV")
                 }
                 TextButton(onClick = viewModel::clearHistory) {
                     Text("Clear all history")

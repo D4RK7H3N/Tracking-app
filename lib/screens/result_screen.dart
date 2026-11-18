@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart' show Position;
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/destination.dart';
 import '../models/fare_origin.dart' show detectFareOrigin;
@@ -35,6 +36,7 @@ class ResultScreen extends StatefulWidget {
 class _ResultScreenState extends State<ResultScreen> {
   /// Optional discount from the fare rule, toggled by the user.
   bool _applyDiscount = false;
+  int _passengers = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +67,20 @@ class _ResultScreenState extends State<ResultScreen> {
             originLat: position?.latitude,
             originLng: position?.longitude,
           );
+
+    String shareText(FareEstimate result) => <String>[
+          'Sagay Tourist Navigator',
+          'Destination: ${destination.name}',
+          'Service: ${data.routeForDestination(destination)?.serviceLabel ?? 'not published'}',
+          'Fare per passenger: ${_fareService.formatFare(result.amount)}',
+          if (_passengers > 1) ...[
+            'Passengers: $_passengers',
+            'Group total: ${_fareService.formatFare(
+                  _fareService.groupTotal(result.amount, _passengers),
+                )}',
+          ],
+          'Estimate only. Actual fares may vary.',
+        ].join('\n');
 
     void startGuidance() {
       final routePoints = appState.distanceResult?.routePoints ?? const <LatLng>[];
@@ -126,8 +142,8 @@ class _ResultScreenState extends State<ResultScreen> {
               vehicleLabel: data.routeForDestination(destination)?.serviceLabel ?? '',
               fare: result.amount,
               discounted: result.discounted,
-              passengers: 1,
-              total: result.amount,
+              passengers: _passengers,
+              total: _fareService.groupTotal(result.amount, _passengers),
               savedAt: now,
             ),
           );
@@ -173,6 +189,12 @@ class _ResultScreenState extends State<ResultScreen> {
               estimate: estimate,
               onSaveTrip: saveTrip,
               onStartGuidance: startGuidance,
+              passengers: _passengers,
+              onChangePassengers: (value) =>
+                  setState(() => _passengers = value.clamp(1, 20)),
+              onShare: (result) => SharePlus.instance.share(
+                    ShareParams(text: shareText(result), title: 'Trip summary'),
+                  ),
               applyDiscount: _applyDiscount,
               onToggleDiscount: (value) =>
                   setState(() => _applyDiscount = value),
@@ -353,6 +375,9 @@ class _FareSection extends StatelessWidget {
     required this.estimate,
     required this.onSaveTrip,
     required this.onStartGuidance,
+    required this.passengers,
+    required this.onChangePassengers,
+    required this.onShare,
     required this.applyDiscount,
     required this.onToggleDiscount,
     required this.hasDistance,
@@ -361,6 +386,9 @@ class _FareSection extends StatelessWidget {
   final FareEstimate? estimate;
   final VoidCallback onSaveTrip;
   final VoidCallback onStartGuidance;
+  final int passengers;
+  final ValueChanged<int> onChangePassengers;
+  final ValueChanged<FareEstimate> onShare;
   final bool applyDiscount;
   final ValueChanged<bool> onToggleDiscount;
   final bool hasDistance;
@@ -430,6 +458,34 @@ class _FareSection extends StatelessWidget {
                 '(${Discount.matrix.percent.round()}% off)',
               ),
             ),
+          if (result.official) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text('Passengers'),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.remove),
+                  tooltip: 'Fewer passengers',
+                  onPressed: () => onChangePassengers(passengers - 1),
+                ),
+                Text('$passengers', style: Theme.of(context).textTheme.titleMedium),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  tooltip: 'More passengers',
+                  onPressed: () => onChangePassengers(passengers + 1),
+                ),
+              ],
+            ),
+            if (passengers > 1)
+              Text(
+                'Group total: ${_fareService.formatFare(_fareService.groupTotal(result.amount, passengers))}',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+          ],
           const SizedBox(height: 6),
           FilledButton.icon(
             onPressed: onStartGuidance,
@@ -441,6 +497,12 @@ class _FareSection extends StatelessWidget {
             onPressed: onSaveTrip,
             icon: const Icon(Icons.bookmark_add_outlined),
             label: const Text('Save to trip history'),
+          ),
+          const SizedBox(height: 6),
+          OutlinedButton.icon(
+            onPressed: () => onShare(result),
+            icon: const Icon(Icons.share),
+            label: const Text('Share trip summary'),
           ),
         ],
       ],

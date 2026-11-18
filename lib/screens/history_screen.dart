@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../services/fare_service.dart';
 import '../services/trip_store.dart';
@@ -103,7 +104,33 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    final csv = <String>[
+                      _fareService.csvHeader(),
+                      for (final record in records)
+                        _fareService.csvRow(
+                          date: record.savedAt.toIso8601String(),
+                          origin: record.originZone,
+                          destination: record.destinationName,
+                          vehicle: record.vehicleLabel,
+                          fare: record.fare,
+                          discounted: record.discounted,
+                          passengers: record.passengers,
+                          total: record.total,
+                        ),
+                    ].join('\n');
+                    SharePlus.instance.share(
+                      ShareParams(text: csv, title: 'Trip history CSV'),
+                    );
+                  },
+                  icon: const Icon(Icons.file_download_outlined),
+                  label: const Text('Export CSV'),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: TextButton.icon(
                   onPressed: () async {
                     await _store.clearHistory();

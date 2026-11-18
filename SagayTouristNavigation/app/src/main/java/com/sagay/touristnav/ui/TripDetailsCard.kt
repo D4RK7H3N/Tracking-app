@@ -23,9 +23,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,6 +47,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.sagay.touristnav.R
 import com.sagay.touristnav.domain.FareFormat
+import com.sagay.touristnav.domain.TripSummary
 import com.sagay.touristnav.domain.models.FareScope
 import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.Terminal
@@ -63,6 +69,9 @@ fun TripDetailsCard(
     onToggleDiscount: () -> Unit,
     onSaveTrip: () -> Unit = {},
     onStartGuidance: () -> Unit = {},
+    passengers: Int = 1,
+    onChangePassengers: (Int) -> Unit = {},
+    onShare: () -> Unit = {},
 ) {
     val layoutDuration = Motion.duration(Motion.LAYOUT_MS)
     Surface(
@@ -190,6 +199,37 @@ fun TripDetailsCard(
             }
             Spacer(Modifier.height(4.dp))
             FareBasisBlock(fare = trip.fare)
+            if (trip.fare.canDiscount) {
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Passengers",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = { onChangePassengers(passengers - 1) }) {
+                        Icon(Icons.Default.Remove, contentDescription = "Fewer passengers")
+                    }
+                    Text(
+                        "$passengers",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    IconButton(onClick = { onChangePassengers(passengers + 1) }) {
+                        Icon(Icons.Default.Add, contentDescription = "More passengers")
+                    }
+                }
+                if (passengers > 1) {
+                    Text(
+                        "Group total: " + FareFormat.peso(
+                            TripSummary.total(TripSummary.unitAmount(trip.fare), passengers),
+                        ),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = SagayColors.SunriseDeep,
+                    )
+                }
+            }
             AnimatedVisibility(
                 visible = trip.fare.canDiscount,
                 enter = cardEnter(layoutDuration),
@@ -218,6 +258,15 @@ fun TripDetailsCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Save to trip history")
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onShare,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Default.Share, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Share trip summary")
             }
             Spacer(Modifier.height(8.dp))
             Button(

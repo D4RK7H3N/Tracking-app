@@ -6,6 +6,7 @@ import com.sagay.touristnav.data.local.SeedLoader
 import com.sagay.touristnav.data.local.entities.TripRecordEntity
 import com.sagay.touristnav.data.repo.TripRepository
 import com.sagay.touristnav.domain.JourneyGuidance
+import com.sagay.touristnav.domain.TripSummary
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.RouteSummary
 import com.sagay.touristnav.domain.models.Terminal
@@ -63,6 +64,7 @@ class TripViewModel @Inject constructor(
     private var cachedTerminal: Terminal? = null
     private var isOnline = false
     private var guidedTrip: TripEstimate? = null
+    private var passengers = 1
 
     init {
         viewModelScope.launch {
@@ -244,10 +246,24 @@ class TripViewModel @Inject constructor(
         return UiState.Guidance(mapData, trip, snapshot)
     }
 
-    fun saveCurrentTrip(passengers: Int = 1) {
+    fun saveCurrentTrip() {
         val trip = (_state.value as? UiState.ResultShown)?.trip ?: return
         viewModelScope.launch { repository.saveTrip(trip, passengers) }
     }
+
+    fun passengerCount(): Int = passengers
+
+    fun setPassengers(value: Int) {
+        passengers = value.coerceIn(1, 20)
+        reissueCurrentState()
+    }
+
+    fun currentShareText(): String {
+        val trip = (_state.value as? UiState.ResultShown)?.trip ?: return ""
+        return TripSummary.text(trip, passengers)
+    }
+
+    fun historyCsv(): String = TripSummary.csv(_history.value)
 
     fun toggleFavorite(destinationId: String) {
         viewModelScope.launch {
