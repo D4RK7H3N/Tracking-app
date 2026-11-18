@@ -26,13 +26,14 @@ The result survives rotation (landscape):
 
 ## Demo video
 
-A screen recording of the app on a physical device, planning a trip from
-**Old Sagay** into **Sagay City** — the yellow-to-red corridor journey and its
-**₱20** fare:
+An animated preview of the app on a physical device — planning the trip from
+**Old Sagay** into **Sagay City**, the yellow-to-red corridor journey and its
+**₱20** fare (tap the senior/student/PWD toggle to see **₱16**):
 
-![Sagay Tourist Navigator app demo](docs/demo/sagay-tourist-navigator-demo.mp4)
+![Animated preview of the Sagay Tourist Navigator demo](docs/demo/preview.gif)
 
-Details about the recording: [`docs/demo/README.md`](docs/demo/README.md).
+[Watch the full 2:55 recording (MP4, 7.6 MB)](docs/demo/sagay-tourist-navigator-demo.mp4) ·
+[About the recording](docs/demo/README.md).
 
 ## Native Android app — v1.0.0
 
