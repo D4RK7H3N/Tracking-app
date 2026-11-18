@@ -53,7 +53,15 @@ in the APK and pending trips are saved and resume when connectivity returns.
 - **Branded adaptive launcher icon** and the calm-teal "Sunrise Route" theme.
 - **Map zoom controls** and a responsive **Locate Me** button.
 - **Rotation-safe state** and saved trips that survive app updates
-  (Room schema v8).
+  (Room schema v9).
+- **Trip history and favourites** with totals, most-used service and starred
+  destinations.
+- **Journey guidance** with live progress, remaining distance and prompts at
+  the service change point and on arrival.
+- **Offline map packs** for a bounded Sagay City area, with download progress
+  and on-device tile storage.
+- **Group fares, sharing and CSV export** of saved trips, plus animated layouts
+  and page transitions that respect the OS reduce-motion setting.
 
 **Build & test** (JDK 17; minSdk 28 / Android 9, targetSdk 35):
 
