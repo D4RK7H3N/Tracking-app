@@ -12,6 +12,7 @@ import '../models/terminal.dart';
 import '../services/distance_service.dart' show DistanceService;
 import '../services/fare_service.dart';
 import '../state/app_state.dart';
+import '../theme/motion.dart';
 import '../widgets/color_chip.dart';
 import '../widgets/compass_indicator.dart';
 import '../widgets/result_card.dart';
@@ -105,7 +106,10 @@ class _ResultScreenState extends State<ResultScreen> {
           ResultCard(
             icon: Icons.directions_bus,
             title: 'Tricycle Terminal',
-            child: _TerminalSection(terminal: terminal),
+            child: _TerminalSection(
+              terminal: terminal,
+              destinationId: destination.id,
+            ),
           ),
 
           // Mini map: user -> destination, plus the terminal.
@@ -299,11 +303,25 @@ class _FareSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(
-                _fareService.formatFare(result.amount),
-                style: theme.textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: theme.colorScheme.primary,
+              AnimatedSwitcher(
+                duration: Motion.duration(context, Motion.layout),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.25),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                ),
+                child: Text(
+                  _fareService.formatFare(result.amount),
+                  key: ValueKey('${result.amount}-${result.discounted}'),
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -339,9 +357,10 @@ class _FareSection extends StatelessWidget {
 /// Terminal block: name, big colour chip with the colour name, and the
 /// list of areas the terminal serves.
 class _TerminalSection extends StatelessWidget {
-  const _TerminalSection({required this.terminal});
+  const _TerminalSection({required this.terminal, required this.destinationId});
 
   final Terminal? terminal;
+  final String destinationId;
 
   @override
   Widget build(BuildContext context) {
@@ -358,9 +377,12 @@ class _TerminalSection extends StatelessWidget {
       children: [
         Text(t.name, style: theme.textTheme.titleLarge),
         const SizedBox(height: 12),
-        ColorChip(
-          color: t.uiColor,
-          label: t.colorName.isEmpty ? t.color : t.colorName,
+        Hero(
+          tag: 'destination-color-$destinationId',
+          child: ColorChip(
+            color: t.uiColor,
+            label: t.colorName.isEmpty ? t.color : t.colorName,
+          ),
         ),
         const SizedBox(height: 12),
         const Row(

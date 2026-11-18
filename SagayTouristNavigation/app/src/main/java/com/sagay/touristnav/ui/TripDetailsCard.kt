@@ -1,5 +1,14 @@
 package com.sagay.touristnav.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.sagay.touristnav.R
 import com.sagay.touristnav.domain.FareFormat
@@ -52,8 +62,16 @@ fun TripDetailsCard(
     onSelectNew: () -> Unit,
     onToggleDiscount: () -> Unit,
 ) {
+    val layoutDuration = Motion.duration(Motion.LAYOUT_MS)
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(
+                animationSpec = tween(
+                    durationMillis = layoutDuration,
+                    easing = Motion.easing,
+                ),
+            ),
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp,
@@ -130,7 +148,11 @@ fun TripDetailsCard(
                     )
                 }
             }
-            if (trip.distanceWarning) {
+            AnimatedVisibility(
+                visible = trip.distanceWarning,
+                enter = cardEnter(layoutDuration),
+                exit = cardExit(layoutDuration),
+            ) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "Distance looks unusual, please verify",
@@ -141,11 +163,13 @@ fun TripDetailsCard(
             }
             Spacer(Modifier.height(14.dp))
             JourneyRow(trip, terminals)
-            trip.stopService?.let { stopsService ->
-                if (stopsService.stops.size > 1) {
-                    Spacer(Modifier.height(12.dp))
-                    RouteStopsBlock(stopsService)
-                }
+            AnimatedVisibility(
+                visible = (trip.stopService?.stops?.size ?: 0) > 1,
+                enter = cardEnter(layoutDuration),
+                exit = cardExit(layoutDuration),
+            ) {
+                Spacer(Modifier.height(12.dp))
+                trip.stopService?.let { stopsService -> RouteStopsBlock(stopsService) }
             }
             if (trip.originZoneName != null) {
                 Spacer(Modifier.height(10.dp))
@@ -164,7 +188,11 @@ fun TripDetailsCard(
             }
             Spacer(Modifier.height(4.dp))
             FareBasisBlock(fare = trip.fare)
-            if (trip.fare.canDiscount) {
+            AnimatedVisibility(
+                visible = trip.fare.canDiscount,
+                enter = cardEnter(layoutDuration),
+                exit = cardExit(layoutDuration),
+            ) {
                 Spacer(Modifier.height(10.dp))
                 DiscountToggle(
                     checked = trip.fareDiscounted,
@@ -562,3 +590,9 @@ private fun formatDuration(minutes: Double): String =
         val m = (minutes % 60).roundToInt()
         if (m == 0) "${h}h" else "${h}h ${m}m"
     }
+
+private fun cardEnter(duration: Int): EnterTransition =
+    fadeIn(tween<Float>(duration)) + expandVertically(tween<IntSize>(duration))
+
+private fun cardExit(duration: Int): ExitTransition =
+    fadeOut(tween<Float>(duration)) + shrinkVertically(tween<IntSize>(duration))

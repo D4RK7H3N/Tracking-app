@@ -1,5 +1,11 @@
 package com.sagay.touristnav.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -65,10 +71,17 @@ fun DestinationSheet(
         }
     }
 
+    val layoutDuration = Motion.duration(Motion.LAYOUT_MS)
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.42f),
+            .fillMaxHeight(0.42f)
+            .animateContentSize(
+                animationSpec = tween(
+                    durationMillis = layoutDuration,
+                    easing = Motion.easing,
+                ),
+            ),
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp,
@@ -92,11 +105,19 @@ fun DestinationSheet(
                 ),
             )
             TerminalsButton(onShowTerminals)
-            if (filtered.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No destinations match your search.")
-                }
-            } else {
+            AnimatedContent(
+                targetState = filtered.isEmpty(),
+                transitionSpec = {
+                    fadeIn(tween(layoutDuration)) togetherWith fadeOut(tween(layoutDuration))
+                },
+                label = "destination-list",
+                modifier = Modifier.fillMaxSize(),
+            ) { empty ->
+                if (empty) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No destinations match your search.")
+                    }
+                } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 16.dp),
@@ -148,6 +169,7 @@ fun DestinationSheet(
                             modifier = Modifier.clickable { onSelect(destination) },
                         )
                     }
+                }
                 }
             }
         }

@@ -8,7 +8,9 @@ import '../models/app_data.dart';
 import '../models/destination.dart';
 import '../services/location_service.dart' show LocationStatus;
 import '../state/app_state.dart';
+import '../theme/motion.dart';
 import '../widgets/compass_indicator.dart';
+import '../widgets/motion_button.dart';
 import 'result_screen.dart';
 
 /// Home screen: a full-screen map with the user's position and destination
@@ -129,12 +131,22 @@ class _MapWithSheet extends StatefulWidget {
   State<_MapWithSheet> createState() => _MapWithSheetState();
 }
 
-class _MapWithSheetState extends State<_MapWithSheet> {
+class _MapWithSheetState extends State<_MapWithSheet>
+    with SingleTickerProviderStateMixin {
   /// Fallback map centre near Sagay City when no GPS fix is available.
   static const LatLng _sagayCenter = LatLng(10.92, 123.45);
 
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
+
+  late final AnimationController _zoomController = AnimationController(
+    vsync: this,
+    duration: Motion.layout,
+  );
+  late Animation<double> _zoomTween =
+      Tween<double>(begin: 13.5, end: 13.5).animate(
+    CurvedAnimation(parent: _zoomController, curve: Motion.standard),
+  );
 
   String _query = '';
   bool _mapReady = false;
@@ -144,13 +156,38 @@ class _MapWithSheetState extends State<_MapWithSheet> {
   void initState() {
     super.initState();
     _lastCenteredPosition = widget.appState.location.position;
+    _zoomController.addListener(_applyZoom);
   }
 
   @override
   void dispose() {
+    _zoomController.removeListener(_applyZoom);
+    _zoomController.dispose();
     _searchController.dispose();
     _mapController.dispose();
     super.dispose();
+  }
+
+  void _applyZoom() {
+    if (_mapReady) {
+      _mapController.move(_mapController.camera.center, _zoomTween.value);
+    }
+  }
+
+  void _zoomBy(double delta) {
+    if (!_mapReady) return;
+    final from = _mapController.camera.zoom;
+    final to = (from + delta).clamp(2.0, 20.0).toDouble();
+    if (Motion.reduced(context)) {
+      _mapController.move(_mapController.camera.center, to);
+      return;
+    }
+    _zoomTween = Tween<double>(begin: from, end: to).animate(
+      CurvedAnimation(parent: _zoomController, curve: Motion.standard),
+    );
+    _zoomController
+      ..duration = Motion.duration(context, Motion.layout)
+      ..forward(from: 0);
   }
 
   /// Recenters the map once whenever a new GPS fix arrives. Safe to call from
@@ -172,7 +209,7 @@ class _MapWithSheetState extends State<_MapWithSheet> {
     appState.selectDestination(destination);
     appState.loadDistance();
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const ResultScreen()),
+      SagayPageRoute<void>(context: context, child: const ResultScreen()),
     );
   }
 
@@ -230,6 +267,25 @@ class _MapWithSheetState extends State<_MapWithSheet> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.my_location),
+          ),
+        ),
+
+        Positioned(
+          left: 12,
+          top: 72,
+          child: Column(
+            children: [
+              MotionIconButton(
+                icon: Icons.add,
+                tooltip: 'Zoom in',
+                onPressed: () => _zoomBy(1),
+              ),
+              MotionIconButton(
+                icon: Icons.remove,
+                tooltip: 'Zoom out',
+                onPressed: () => _zoomBy(-1),
+              ),
+            ],
           ),
         ),
 
@@ -294,25 +350,40 @@ class _MapWithSheetState extends State<_MapWithSheet> {
                     ),
                   ),
                   // Location problem banner (hidden when all is well).
-                  _LocationBanner(appState: appState),
+                  AnimatedSize(
+                    duration: Motion.duration(context, Motion.layout),
+                    curve: Motion.standard,
+                    child: AnimatedSwitcher(
+                      duration: Motion.duration(context, Motion.layout),
+                      child: _LocationBanner(
+                        key: ValueKey(appState.location.status),
+                        appState: appState,
+                      ),
+                    ),
+                  ),
                   // Destination list.
                   Expanded(
-                    child: filtered.isEmpty
-                        ? const Center(
-                            child: Text('No destinations match your search.'),
-                          )
-                        : ListView.builder(
-                            controller: scrollController,
-                            padding: const EdgeInsets.only(bottom: 16),
-                            itemCount: filtered.length,
-                            itemBuilder: (context, index) {
-                              return _DestinationTile(
-                                destination: filtered[index],
-                                data: widget.data,
-                                onTap: () => _openResult(filtered[index]),
-                              );
-                            },
-                          ),
+                    child: AnimatedSwitcher(
+                      duration: Motion.duration(context, Motion.layout),
+                      child: filtered.isEmpty
+                          ? const Center(
+                              key: ValueKey('empty'),
+                              child: Text('No destinations match your search.'),
+                            )
+                          : ListView.builder(
+                              key: ValueKey(_query),
+                              controller: scrollController,
+                              padding: const EdgeInsets.only(bottom: 16),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                return _DestinationTile(
+                                  destination: filtered[index],
+                                  data: widget.data,
+                                  onTap: () => _openResult(filtered[index]),
+                                );
+                              },
+                            ),
+                    ),
                   ),
                 ],
                 ),
@@ -415,9 +486,12 @@ class _DestinationTile extends StatelessWidget {
     final terminal = data.terminalForDestination(destination);
     final color = terminal?.uiColor ?? Colors.grey;
     return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: color,
-        child: const Icon(Icons.location_on, color: Colors.white, size: 20),
+      leading: Hero(
+        tag: 'destination-color-${destination.id}',
+        child: CircleAvatar(
+          backgroundColor: color,
+          child: const Icon(Icons.location_on, color: Colors.white, size: 20),
+        ),
       ),
       title: Text(
         destination.name,
@@ -437,7 +511,7 @@ class _DestinationTile extends StatelessWidget {
 /// browsing destinations while the banner is visible; distance and fare
 /// simply need GPS.
 class _LocationBanner extends StatelessWidget {
-  const _LocationBanner({required this.appState});
+  const _LocationBanner({super.key, required this.appState});
 
   final AppState appState;
 

@@ -1,14 +1,22 @@
 package com.sagay.touristnav.ui
 
 import android.Manifest
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.drawable.BitmapDrawable
+import android.view.animation.DecelerateInterpolator
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +43,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -262,6 +271,35 @@ private fun TripMap(
     var lastCameraKey by remember { mutableStateOf("") }
     val cameraKey = "${selected?.id ?: "-"}|${routePoints.size}|${position.lat},${position.lng}"
     var locateRequest by remember { mutableStateOf(0) }
+    val reduceMotion = Motion.reduced()
+    val zoomDuration = Motion.duration(Motion.LAYOUT_MS)
+    var zoomAnimator by remember { mutableStateOf<ValueAnimator?>(null) }
+    val smoothZoom: (Float) -> Unit = { delta ->
+        zoomAnimator?.cancel()
+        val from = mapView.zoomLevelDouble
+        val to = (from + delta.toDouble()).coerceIn(
+            mapView.minZoomLevel.toDouble(),
+            mapView.maxZoomLevel.toDouble(),
+        )
+        if (reduceMotion) {
+            mapView.controller.setZoom(to)
+        } else {
+            ValueAnimator.ofFloat(from.toFloat(), to.toFloat()).apply {
+                duration = zoomDuration.toLong()
+                interpolator = DecelerateInterpolator()
+                addUpdateListener { animation ->
+                    mapView.controller.setZoom((animation.animatedValue as Float).toDouble())
+                }
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        if (zoomAnimator == animation) zoomAnimator = null
+                    }
+                })
+                zoomAnimator = this
+                start()
+            }
+        }
+    }
 
     LaunchedEffect(locateRequest, position.lat, position.lng) {
         if (locateRequest > 0) {
@@ -357,8 +395,7 @@ private fun TripMap(
             )
         }
         ZoomControls(
-            onZoomOut = mapView.controller::zoomOut,
-            onZoomIn = mapView.controller::zoomIn,
+            onZoom = smoothZoom,
             modifier = Modifier
                 .align(Alignment.CenterStart)
                 .padding(start = 12.dp),
@@ -376,16 +413,15 @@ private fun TripMap(
 /** Stacked zoom-out / zoom-in buttons on the map's left edge. */
 @Composable
 private fun ZoomControls(
-    onZoomOut: () -> Unit,
-    onZoomIn: () -> Unit,
+    onZoom: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        ZoomButton(label = "-", contentDescription = "Zoom out", onClick = onZoomOut)
-        ZoomButton(label = "+", contentDescription = "Zoom in", onClick = onZoomIn)
+        ZoomButton(label = "-", contentDescription = "Zoom out", onClick = { onZoom(-1f) })
+        ZoomButton(label = "+", contentDescription = "Zoom in", onClick = { onZoom(1f) })
     }
 }
 
@@ -395,13 +431,32 @@ private fun ZoomButton(
     contentDescription: String,
     onClick: () -> Unit,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale = remember { Animatable(1f) }
+    val pressDuration = Motion.duration(Motion.MICRO_MS)
+    LaunchedEffect(pressed) {
+        scale.animateTo(
+            targetValue = if (pressed) 0.88f else 1f,
+            animationSpec = tween(
+                durationMillis = pressDuration,
+                easing = Motion.easing,
+            ),
+        )
+    }
     Surface(
         onClick = onClick,
+        interactionSource = interactionSource,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
         color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.95f),
         tonalElevation = 2.dp,
         shadowElevation = 3.dp,
-        modifier = Modifier.size(44.dp),
+        modifier = Modifier
+            .size(44.dp)
+            .graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            },
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Text(
