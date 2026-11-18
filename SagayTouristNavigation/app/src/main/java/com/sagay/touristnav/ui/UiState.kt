@@ -1,5 +1,6 @@
 package com.sagay.touristnav.ui
 
+import com.sagay.touristnav.domain.GuidanceSnapshot
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.Terminal
@@ -60,6 +61,12 @@ sealed interface UiState {
     data class ResultShown(
         val data: MapData,
         val trip: TripEstimate,
+    ) : UiState
+
+    data class Guidance(
+        val data: MapData,
+        val trip: TripEstimate,
+        val snapshot: GuidanceSnapshot,
     ) : UiState
 }
 

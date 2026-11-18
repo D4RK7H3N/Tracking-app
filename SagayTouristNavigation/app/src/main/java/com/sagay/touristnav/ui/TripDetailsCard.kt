@@ -62,6 +62,7 @@ fun TripDetailsCard(
     onSelectNew: () -> Unit,
     onToggleDiscount: () -> Unit,
     onSaveTrip: () -> Unit = {},
+    onStartGuidance: () -> Unit = {},
 ) {
     val layoutDuration = Motion.duration(Motion.LAYOUT_MS)
     Surface(
@@ -201,6 +202,17 @@ fun TripDetailsCard(
                 )
             }
             Spacer(Modifier.height(14.dp))
+            Button(
+                onClick = onStartGuidance,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SagayColors.TealPrimary,
+                    contentColor = Color.White,
+                ),
+            ) {
+                Text("Start journey guidance")
+            }
+            Spacer(Modifier.height(8.dp))
             OutlinedButton(
                 onClick = onSaveTrip,
                 modifier = Modifier.fillMaxWidth(),

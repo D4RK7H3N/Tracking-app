@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.sagay.touristnav.data.local.SeedLoader
 import com.sagay.touristnav.data.local.entities.TripRecordEntity
 import com.sagay.touristnav.data.repo.TripRepository
+import com.sagay.touristnav.domain.JourneyGuidance
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.RouteSummary
 import com.sagay.touristnav.domain.models.Terminal
+import com.sagay.touristnav.domain.models.TripEstimate
 import com.sagay.touristnav.platform.LocationFix
 import com.sagay.touristnav.platform.LocationProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -60,6 +62,7 @@ class TripViewModel @Inject constructor(
     private var cachedDestination: Destination? = null
     private var cachedTerminal: Terminal? = null
     private var isOnline = false
+    private var guidedTrip: TripEstimate? = null
 
     init {
         viewModelScope.launch {
@@ -124,6 +127,7 @@ class TripViewModel @Inject constructor(
             is UiState.WaitingForInternet -> s.copy(data = mapData)
             is UiState.RouteError -> s.copy(data = mapData)
             is UiState.ResultShown -> s.copy(data = mapData)
+            is UiState.Guidance -> guidanceState(s.trip)
             else -> s
         }
     }
@@ -208,6 +212,36 @@ class TripViewModel @Inject constructor(
         fetchJob?.cancel()
         fetchJob = null
         _state.value = UiState.MapReady(mapData)
+    }
+
+    fun startGuidance() {
+        val shown = _state.value as? UiState.ResultShown ?: return
+        guidedTrip = shown.trip
+        _state.value = guidanceState(shown.trip)
+    }
+
+    fun endGuidance() {
+        val trip = guidedTrip ?: return
+        guidedTrip = null
+        _state.value = UiState.ResultShown(mapData, trip)
+    }
+
+    private fun guidanceState(trip: TripEstimate): UiState.Guidance {
+        val changeStop = trip.services.firstNotNullOfOrNull { service ->
+            service.stops.firstOrNull { stop ->
+                trip.changeAt?.let { stop.name.equals(it, ignoreCase = true) } == true
+            }
+        }
+        val snapshot = JourneyGuidance.snapshot(
+            points = trip.routePoints,
+            currentLat = mapData.position.lat,
+            currentLng = mapData.position.lng,
+            destinationName = trip.destination.name,
+            changeAtName = trip.changeAt,
+            changeAtLat = changeStop?.lat,
+            changeAtLng = changeStop?.lng,
+        )
+        return UiState.Guidance(mapData, trip, snapshot)
     }
 
     fun saveCurrentTrip(passengers: Int = 1) {

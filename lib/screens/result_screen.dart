@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../models/destination.dart';
 import '../models/fare_origin.dart' show detectFareOrigin;
+import '../models/route.dart' show RouteStop;
 import '../models/fare_rule.dart' show Discount, FareEstimate;
 import '../models/terminal.dart';
 import '../services/distance_service.dart' show DistanceService;
@@ -18,6 +19,7 @@ import '../theme/motion.dart';
 import '../widgets/color_chip.dart';
 import '../widgets/compass_indicator.dart';
 import '../widgets/result_card.dart';
+import 'guidance_screen.dart';
 
 const FareService _fareService = FareService();
 
@@ -63,6 +65,44 @@ class _ResultScreenState extends State<ResultScreen> {
             originLat: position?.latitude,
             originLng: position?.longitude,
           );
+
+    void startGuidance() {
+      final routePoints = appState.distanceResult?.routePoints ?? const <LatLng>[];
+      if (routePoints.isEmpty) return;
+      final position = appState.location.position;
+      final origin = position == null
+          ? null
+          : detectFareOrigin(
+              position.latitude,
+              position.longitude,
+              data.fareOrigins,
+            );
+      final journey = data.journeyFor(origin?.zone ?? '', destination);
+      final changeName = journey.changeAt;
+      RouteStop? changeStop;
+      if (changeName != null) {
+        for (final service in journey.services) {
+          for (final stop in service.stops) {
+            if (stop.name == changeName) {
+              changeStop = stop;
+              break;
+            }
+          }
+        }
+      }
+      Navigator.of(context).push(
+        SagayPageRoute<void>(
+          context: context,
+          child: GuidanceScreen(
+            destinationName: destination.name,
+            points: routePoints,
+            changeAtName: changeName,
+            changeAtLat: changeStop?.lat,
+            changeAtLng: changeStop?.lng,
+          ),
+        ),
+      );
+    }
 
     void saveTrip() async {
       final result = estimate;
@@ -132,6 +172,7 @@ class _ResultScreenState extends State<ResultScreen> {
             child: _FareSection(
               estimate: estimate,
               onSaveTrip: saveTrip,
+              onStartGuidance: startGuidance,
               applyDiscount: _applyDiscount,
               onToggleDiscount: (value) =>
                   setState(() => _applyDiscount = value),
@@ -311,6 +352,7 @@ class _FareSection extends StatelessWidget {
   const _FareSection({
     required this.estimate,
     required this.onSaveTrip,
+    required this.onStartGuidance,
     required this.applyDiscount,
     required this.onToggleDiscount,
     required this.hasDistance,
@@ -318,6 +360,7 @@ class _FareSection extends StatelessWidget {
 
   final FareEstimate? estimate;
   final VoidCallback onSaveTrip;
+  final VoidCallback onStartGuidance;
   final bool applyDiscount;
   final ValueChanged<bool> onToggleDiscount;
   final bool hasDistance;
@@ -387,6 +430,12 @@ class _FareSection extends StatelessWidget {
                 '(${Discount.matrix.percent.round()}% off)',
               ),
             ),
+          const SizedBox(height: 6),
+          FilledButton.icon(
+            onPressed: onStartGuidance,
+            icon: const Icon(Icons.navigation),
+            label: const Text('Start journey guidance'),
+          ),
           const SizedBox(height: 6),
           OutlinedButton.icon(
             onPressed: onSaveTrip,

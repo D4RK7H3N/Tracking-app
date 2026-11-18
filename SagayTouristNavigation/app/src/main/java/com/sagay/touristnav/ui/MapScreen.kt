@@ -208,6 +208,24 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
                     onSelectNew = viewModel::selectNewDestination,
                     onToggleDiscount = viewModel::toggleDiscount,
                     onSaveTrip = { viewModel.saveCurrentTrip() },
+                    onStartGuidance = viewModel::startGuidance,
+                )
+            },
+        )
+
+        is UiState.Guidance -> TripMap(
+            data = s.data,
+            selected = s.trip.destination,
+            routePoints = s.trip.routePoints,
+            onDestinationClick = viewModel::onDestinationSelected,
+            onLocateMe = viewModel::locateMe,
+            busStops = s.trip.stopService?.stops.orEmpty(),
+            busColorHex = s.trip.stopService?.colorHex ?: "#FFFFFF",
+            bottomContent = {
+                GuidanceCard(
+                    snapshot = s.snapshot,
+                    destinationName = s.trip.destination.name,
+                    onEnd = viewModel::endGuidance,
                 )
             },
         )
