@@ -70,6 +70,10 @@ for the full v1.0.0 changelog. Full app documentation (user guide, architecture,
 state machine, data model, routing, fare, offline behaviour, build, testing):
 [`docs/APP_DOCUMENTATION.md`](docs/APP_DOCUMENTATION.md).
 
+The Flutter version also builds for iOS on a macOS GitHub Actions runner; see
+[`docs/ios/README.md`](docs/ios/README.md) for the sideload instructions and
+the unsigned/signed build pipeline.
+
 ---
 
 *The sections below describe the original Flutter prototype (`lib/`).*
