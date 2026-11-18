@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/D4RK7H3N/Tracking-app/shared/sagay-contract/schema.json",
+  "title": "Sagay Tourist Navigator data contract",
+  "version": 3,
+  "type": "object",
+  "required": ["note", "terminals", "destinations", "fare_rule", "fare_origins", "fare_matrix", "route_access", "routes"],
+  "properties": {
+    "note": { "type": "string" },
+    "terminals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "lat", "lng", "colorHex", "colorName", "serviceArea", "vehicles"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "lat": { "type": "number" },
+          "lng": { "type": "number" },
+          "colorHex": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+          "colorName": { "type": "string" },
+          "serviceArea": { "type": "string" },
+          "vehicles": { "type": "array", "items": { "enum": ["tricycle", "reporm2", "bus", "boat"] }, "minItems": 1 }
+        }
+      }
+    },
+    "destinations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "category", "lat", "lng", "terminalId", "boat", "zone", "routeId"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "category": { "type": "string" },
+          "lat": { "type": "number" },
+          "lng": { "type": "number" },
+          "terminalId": { "type": "string" },
+          "boat": { "type": "boolean" },
+          "zone": { "type": "string" },
+          "routeId": { "type": "string" }
+        }
+      }
+    },
+    "fare_rule": {
+      "type": "object",
+      "required": ["id", "baseFare", "baseKm", "extraPerKm", "source"],
+      "properties": {
+        "id": { "type": "integer" },
+        "baseFare": { "type": "number" },
+        "baseKm": { "type": "number" },
+        "extraPerKm": { "type": "number" },
+        "maxFare": { "type": ["number", "null"] },
+        "source": { "type": "string" }
+      }
+    },
+    "fare_origins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["zone", "name", "lat", "lng", "radiusKm"],
+        "properties": {
+          "zone": { "type": "string" },
+          "name": { "type": "string" },
+          "lat": { "type": "number" },
+          "lng": { "type": "number" },
+          "radiusKm": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "fare_matrix": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["origin", "destination", "regular", "discounted"],
+        "properties": {
+          "origin": { "type": "string" },
+          "destination": { "type": "string" },
+          "regular": { "type": "number" },
+          "discounted": { "type": "number" }
+        }
+      }
+    },
+    "route_access": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["originZone", "destinationRouteId", "viaRouteId", "changeAt", "fareZone"],
+        "properties": {
+          "originZone": { "type": "string" },
+          "destinationRouteId": { "type": "string" },
+          "viaRouteId": { "type": "string" },
+          "changeAt": { "type": "string" },
+          "fareZone": { "type": "string" }
+        }
+      }
+    },
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "terminalId", "colorHex", "colorName", "vehicle", "stops"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "terminalId": { "type": "string" },
+          "colorHex": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+          "colorName": { "type": "string" },
+          "vehicle": { "enum": ["tricycle", "reporm2", "bus", "boat"] },
+          "stops": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "lat", "lng"],
+              "properties": {
+                "name": { "type": "string" },
+                "lat": { "type": "number" },
+                "lng": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

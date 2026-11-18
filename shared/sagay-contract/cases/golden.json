@@ -1,0 +1,147 @@
+{
+  "version": 3,
+  "fare": [
+    {
+      "id": "corridor-regular",
+      "originZone": "OLD_SAGAY",
+      "destinationZone": "SAGAY CITY",
+      "roadKm": 7.3,
+      "discounted": false,
+      "expectedAmount": 20,
+      "expectedOfficial": true
+    },
+    {
+      "id": "corridor-discounted",
+      "originZone": "OLD_SAGAY",
+      "destinationZone": "SAGAY CITY",
+      "roadKm": 7.3,
+      "discounted": true,
+      "expectedAmount": 16,
+      "expectedOfficial": true
+    },
+    {
+      "id": "city-ricky-regular",
+      "originZone": "CITY_PROPER",
+      "destinationZone": "RICKY",
+      "roadKm": 4.2,
+      "discounted": false,
+      "expectedAmount": 17,
+      "expectedOfficial": true
+    },
+    {
+      "id": "city-ricky-discounted",
+      "originZone": "CITY_PROPER",
+      "destinationZone": "RICKY",
+      "roadKm": 4.2,
+      "discounted": true,
+      "expectedAmount": 13.6,
+      "expectedOfficial": true
+    },
+    {
+      "id": "vito-port-regular",
+      "originZone": "CROSSING_VITO",
+      "destinationZone": "VITO PORT",
+      "roadKm": 9.1,
+      "discounted": false,
+      "expectedAmount": 23,
+      "expectedOfficial": true
+    },
+    {
+      "id": "paraiso-fabrica-key-match",
+      "originZone": "PARAISO",
+      "destinationZone": "BRGY. FABRICA",
+      "roadKm": 5.0,
+      "discounted": false,
+      "expectedAmount": 15,
+      "expectedOfficial": true
+    },
+    {
+      "id": "fallback-short",
+      "originZone": "UNKNOWN",
+      "destinationZone": "",
+      "roadKm": 3.0,
+      "discounted": false,
+      "expectedAmount": 15,
+      "expectedOfficial": false
+    },
+    {
+      "id": "fallback-stepped",
+      "originZone": "UNKNOWN",
+      "destinationZone": "",
+      "roadKm": 8.0,
+      "discounted": false,
+      "expectedAmount": 25,
+      "expectedOfficial": false
+    },
+    {
+      "id": "fallback-capped",
+      "originZone": "UNKNOWN",
+      "destinationZone": "",
+      "roadKm": 20.0,
+      "discounted": false,
+      "expectedAmount": 40,
+      "expectedOfficial": false
+    }
+  ],
+  "zones": [
+    {
+      "id": "old-sagay-port",
+      "lat": 10.94691,
+      "lng": 123.426,
+      "expectedZone": "OLD_SAGAY",
+      "expectedName": "Brgy. Old Sagay"
+    },
+    {
+      "id": "city-proper",
+      "lat": 10.889,
+      "lng": 123.414,
+      "expectedZone": "CITY_PROPER",
+      "expectedName": "City Proper (Poblacion)"
+    },
+    {
+      "id": "crossing-vito",
+      "lat": 10.89862,
+      "lng": 123.51183,
+      "expectedZone": "CROSSING_VITO",
+      "expectedName": "Crossing Vito"
+    },
+    {
+      "id": "outside-all",
+      "lat": 12.0,
+      "lng": 124.0,
+      "expectedZone": null,
+      "expectedName": null
+    }
+  ],
+  "journeys": [
+    {
+      "id": "old-sagay-to-city",
+      "originZone": "OLD_SAGAY",
+      "destinationRouteId": "R-POPLACION",
+      "destinationZone": "AGUILAR SUBDIVISION",
+      "roadKm": 7.3,
+      "expectedServices": ["R-OLD-SAGAY", "R-POPLACION"],
+      "expectedChangeAt": "Sagay City Bus Terminal (Poblacion)",
+      "expectedFareZone": "SAGAY CITY",
+      "expectedRegular": 20,
+      "expectedDiscounted": 16
+    },
+    {
+      "id": "old-sagay-local",
+      "originZone": "OLD_SAGAY",
+      "destinationRouteId": "R-OLD-SAGAY",
+      "destinationZone": "BRGY. TABA-AO",
+      "roadKm": 5.2,
+      "expectedServices": ["R-OLD-SAGAY"],
+      "expectedChangeAt": null,
+      "expectedFareZone": "BRGY. TABA-AO",
+      "expectedRegular": 15,
+      "expectedDiscounted": 12
+    }
+  ],
+  "groups": [
+    { "id": "three-regular", "unitAmount": 20, "passengers": 3, "expectedTotal": 60 },
+    { "id": "two-discounted", "unitAmount": 16, "passengers": 2, "expectedTotal": 32 },
+    { "id": "single", "unitAmount": 17, "passengers": 1, "expectedTotal": 17 }
+  ]
+}

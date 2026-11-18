@@ -1,28 +1,82 @@
+import '../models/app_data.dart';
+import '../models/destination.dart';
+import '../models/fare_origin.dart';
 import '../models/fare_rule.dart';
 
-/// Turns a distance + fare rule (+ optional discount) into a displayed fare.
-///
-/// Kept separate from the UI so fare logic stays unit-testable, and so a
-/// future lookup-table policy can replace [FareRule.fareFor] without any
-/// screen changes.
 class FareService {
   const FareService();
 
-  /// Fare in Philippine pesos for [distanceKm] under [rule].
-  ///
-  /// When [discount] is given, its percent is taken off the computed fare.
-  double computeFare({
-    required FareRule rule,
-    required double distanceKm,
-    Discount? discount,
+  FareEstimate estimate({
+    required AppData data,
+    required Destination destination,
+    required double roadKm,
+    required bool discounted,
+    double? originLat,
+    double? originLng,
+    String? originZone,
   }) {
-    final baseFare = rule.fareFor(distanceKm);
-    if (discount == null || discount.percent <= 0) {
-      return baseFare;
+    FareOrigin? origin;
+    if (originZone == null && originLat != null && originLng != null) {
+      origin = detectFareOrigin(originLat, originLng, data.fareOrigins);
+    } else if (originZone != null) {
+      for (final candidate in data.fareOrigins) {
+        if (candidate.zone.toUpperCase() == originZone.toUpperCase()) {
+          origin = candidate;
+          break;
+        }
+      }
     }
-    return baseFare * (1 - discount.percent / 100);
+    final zone = origin?.zone ?? originZone ?? '';
+    final journey = data.journeyFor(zone, destination);
+    return estimateFare(
+      rule: data.fareRule,
+      lookup: data.matrixLookup,
+      originZone: zone,
+      destinationZone: journey.fareZone ?? destination.zone,
+      roadKm: roadKm,
+      discounted: discounted,
+      originName: origin?.name,
+    );
   }
 
-  /// Whole-peso display string, e.g. "₱35".
-  String formatFare(double amount) => '₱${amount.round()}';
+  String formatFare(double amount) {
+    if (amount == amount.roundToDouble()) {
+      return '\u20B1${amount.round()}';
+    }
+    return '\u20B1${amount.toStringAsFixed(2)}';
+  }
+
+  double groupTotal(double unitAmount, int passengers) =>
+      unitAmount * (passengers < 1 ? 1 : passengers);
+
+  String csvHeader() => 'date,origin,destination,vehicle,fare,discounted,passengers,total';
+
+  String csvRow({
+    required String date,
+    required String origin,
+    required String destination,
+    required String vehicle,
+    required double fare,
+    required bool discounted,
+    required int passengers,
+    required double total,
+  }) {
+    return <String>[
+      date,
+      origin,
+      destination,
+      vehicle,
+      fare.toStringAsFixed(2),
+      discounted ? 'true' : 'false',
+      passengers.toString(),
+      total.toStringAsFixed(2),
+    ].map(_escapeCsv).join(',');
+  }
+
+  String _escapeCsv(String value) {
+    if (!value.contains(',') && !value.contains('"') && !value.contains('\n')) {
+      return value;
+    }
+    return '"${value.replaceAll('"', '""')}"';
+  }
 }

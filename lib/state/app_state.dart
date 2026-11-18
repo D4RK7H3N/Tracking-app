@@ -158,7 +158,7 @@ class AppState extends ChangeNotifier {
         ? LatLng(terminal.lat, terminal.lng)
         : LatLng(destination.lat, destination.lng);
 
-    final roadFactor = _data?.fareRule.roadFactor ?? 1.25;
+    const roadFactor = 1.3;
     final result = await _distanceService.getDistanceKm(
       from: LatLng(resolved.latitude, resolved.longitude),
       to: roadTarget,

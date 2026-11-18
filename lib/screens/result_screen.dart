@@ -7,7 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../models/destination.dart';
-import '../models/fare_rule.dart' show Discount;
+import '../models/fare_rule.dart' show Discount, FareEstimate;
 import '../models/terminal.dart';
 import '../services/distance_service.dart' show DistanceService;
 import '../services/fare_service.dart';
@@ -49,13 +49,16 @@ class _ResultScreenState extends State<ResultScreen> {
 
     // Fare (null until a distance is available).
     final distance = appState.distanceResult;
-    final discount = data.fareRule.firstDiscount;
-    final double? fare = distance == null
+    final position = appState.location.position;
+    final FareEstimate? estimate = distance == null
         ? null
-        : _fareService.computeFare(
-            rule: data.fareRule,
-            distanceKm: distance.km,
-            discount: _applyDiscount ? discount : null,
+        : _fareService.estimate(
+            data: data,
+            destination: destination,
+            roadKm: distance.km,
+            discounted: _applyDiscount,
+            originLat: position?.latitude,
+            originLng: position?.longitude,
           );
 
     return Scaffold(
@@ -90,8 +93,7 @@ class _ResultScreenState extends State<ResultScreen> {
             icon: Icons.payments_outlined,
             title: 'Estimated Tricycle Fare',
             child: _FareSection(
-              fare: fare,
-              discount: discount,
+              estimate: estimate,
               applyDiscount: _applyDiscount,
               onToggleDiscount: (value) =>
                   setState(() => _applyDiscount = value),
@@ -266,15 +268,13 @@ class _OfflineLabel extends StatelessWidget {
 /// (hidden entirely when the fare rule has no discounts or no distance yet).
 class _FareSection extends StatelessWidget {
   const _FareSection({
-    required this.fare,
-    required this.discount,
+    required this.estimate,
     required this.applyDiscount,
     required this.onToggleDiscount,
     required this.hasDistance,
   });
 
-  final double? fare;
-  final Discount? discount;
+  final FareEstimate? estimate;
   final bool applyDiscount;
   final ValueChanged<bool> onToggleDiscount;
   final bool hasDistance;
@@ -282,46 +282,55 @@ class _FareSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Local copy so the compiler can promote the nullable field below.
-    final discountEntry = discount;
+    final result = estimate;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (fare == null)
+        if (result == null)
           Text(
             hasDistance
                 ? 'Calculating…'
                 : 'A GPS location is needed to estimate the fare.',
             style: theme.textTheme.bodyMedium,
           )
-        else
+        else ...[
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                _fareService.formatFare(fare!),
+                _fareService.formatFare(result.amount),
                 style: theme.textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: theme.colorScheme.primary,
                 ),
               ),
               const SizedBox(width: 8),
-              Text('estimated fare', style: theme.textTheme.bodyMedium),
+              Text(
+                result.official ? 'official matrix fare' : 'estimated fare',
+                style: theme.textTheme.bodyMedium,
+              ),
             ],
           ),
-        // Toggle only when a discount exists AND a fare was computed.
-        if (discountEntry != null && fare != null)
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: applyDiscount,
-            onChanged: onToggleDiscount,
-            title: Text(
-              'Apply ${discountEntry.label} '
-              '(${discountEntry.percent.round()}% off)',
+          const SizedBox(height: 6),
+          Text(
+            result.basis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
+          if (result.official)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: applyDiscount,
+              onChanged: onToggleDiscount,
+              title: Text(
+                'Apply ${Discount.matrix.label} '
+                '(${Discount.matrix.percent.round()}% off)',
+              ),
+            ),
+        ],
       ],
     );
   }
