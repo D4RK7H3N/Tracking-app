@@ -5,6 +5,7 @@ import 'screens/home_screen.dart';
 import 'services/data_service.dart';
 import 'services/distance_service.dart';
 import 'services/location_service.dart';
+import 'services/trip_store.dart';
 import 'state/app_state.dart';
 
 void main() {
@@ -23,6 +24,7 @@ class SagayTouristNavigatorApp extends StatelessWidget {
         Provider<DataService>(create: (_) => DataService()),
         Provider<LocationService>(create: (_) => LocationService()),
         Provider<DistanceService>(create: (_) => DistanceService()),
+        Provider<TripStore>(create: (_) => TripStore()),
         ChangeNotifierProvider<AppState>(
           create: (context) => AppState(
             dataService: context.read<DataService>(),

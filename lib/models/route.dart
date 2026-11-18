@@ -46,6 +46,8 @@ class Route {
   final String vehicle;
   final List<RouteStop> stops;
 
+  String get serviceLabel => '$colorName $vehicle';
+
   Color get uiColor {
     var value = colorHex.replaceFirst('#', '');
     if (value.length == 6) value = 'FF$value';

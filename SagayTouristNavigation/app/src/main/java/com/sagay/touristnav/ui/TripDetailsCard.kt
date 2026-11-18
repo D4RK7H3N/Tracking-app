@@ -61,6 +61,7 @@ fun TripDetailsCard(
     terminals: Map<String, Terminal>,
     onSelectNew: () -> Unit,
     onToggleDiscount: () -> Unit,
+    onSaveTrip: () -> Unit = {},
 ) {
     val layoutDuration = Motion.duration(Motion.LAYOUT_MS)
     Surface(
@@ -200,6 +201,13 @@ fun TripDetailsCard(
                 )
             }
             Spacer(Modifier.height(14.dp))
+            OutlinedButton(
+                onClick = onSaveTrip,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Save to trip history")
+            }
+            Spacer(Modifier.height(8.dp))
             Button(
                 onClick = onSelectNew,
                 modifier = Modifier.fillMaxWidth(),

@@ -12,6 +12,10 @@ import com.sagay.touristnav.data.local.dao.FareOriginDao
 import com.sagay.touristnav.data.local.dao.FareRuleDao
 import com.sagay.touristnav.data.local.dao.TerminalDao
 import com.sagay.touristnav.data.local.dao.TripStateDao
+import com.sagay.touristnav.data.local.dao.TripRecordDao
+import com.sagay.touristnav.data.local.dao.FavoriteDao
+import com.sagay.touristnav.data.local.entities.TripRecordEntity
+import com.sagay.touristnav.data.local.entities.FavoriteEntity
 
 @Database(
     entities = [
@@ -24,8 +28,10 @@ import com.sagay.touristnav.data.local.dao.TripStateDao
         RouteEntity::class,
         RouteStopEntity::class,
         RouteAccessEntity::class,
+        TripRecordEntity::class,
+        FavoriteEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -37,6 +43,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun fareOriginDao(): FareOriginDao
     abstract fun routeDao(): RouteDao
     abstract fun routeAccessDao(): RouteAccessDao
+    abstract fun tripRecordDao(): TripRecordDao
+    abstract fun favoriteDao(): FavoriteDao
 
     companion object {
         val MIGRATION_2_3 = object : Migration(2, 3) {
@@ -155,6 +163,29 @@ abstract class AppDatabase : RoomDatabase() {
                         "`changeAt` TEXT NOT NULL, " +
                         "`fareZone` TEXT NOT NULL, " +
                         "PRIMARY KEY(`originZone`, `destinationRouteId`))",
+                )
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `trip_record` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`destinationId` TEXT NOT NULL, " +
+                        "`destinationName` TEXT NOT NULL, " +
+                        "`originZone` TEXT NOT NULL, " +
+                        "`vehicleLabel` TEXT NOT NULL, " +
+                        "`fare` REAL NOT NULL, " +
+                        "`discounted` INTEGER NOT NULL, " +
+                        "`passengers` INTEGER NOT NULL, " +
+                        "`total` REAL NOT NULL, " +
+                        "`savedAt` INTEGER NOT NULL)",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `favorite` (" +
+                        "`destinationId` TEXT NOT NULL PRIMARY KEY, " +
+                        "`savedAt` INTEGER NOT NULL)",
                 )
             }
         }

@@ -11,6 +11,8 @@ import com.sagay.touristnav.data.local.dao.FareOriginDao
 import com.sagay.touristnav.data.local.dao.FareRuleDao
 import com.sagay.touristnav.data.local.dao.TerminalDao
 import com.sagay.touristnav.data.local.dao.TripStateDao
+import com.sagay.touristnav.data.local.dao.TripRecordDao
+import com.sagay.touristnav.data.local.dao.FavoriteDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,6 +35,7 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_5_6,
                 AppDatabase.MIGRATION_6_7,
                 AppDatabase.MIGRATION_7_8,
+                AppDatabase.MIGRATION_8_9,
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -60,4 +63,10 @@ object DatabaseModule {
 
     @Provides
     fun provideRouteAccessDao(db: AppDatabase): RouteAccessDao = db.routeAccessDao()
+
+    @Provides
+    fun provideTripRecordDao(db: AppDatabase): TripRecordDao = db.tripRecordDao()
+
+    @Provides
+    fun provideFavoriteDao(db: AppDatabase): FavoriteDao = db.favoriteDao()
 }

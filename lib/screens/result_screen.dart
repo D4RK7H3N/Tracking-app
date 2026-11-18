@@ -7,10 +7,12 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../models/destination.dart';
+import '../models/fare_origin.dart' show detectFareOrigin;
 import '../models/fare_rule.dart' show Discount, FareEstimate;
 import '../models/terminal.dart';
 import '../services/distance_service.dart' show DistanceService;
 import '../services/fare_service.dart';
+import '../services/trip_store.dart';
 import '../state/app_state.dart';
 import '../theme/motion.dart';
 import '../widgets/color_chip.dart';
@@ -62,6 +64,40 @@ class _ResultScreenState extends State<ResultScreen> {
             originLng: position?.longitude,
           );
 
+    void saveTrip() async {
+      final result = estimate;
+      if (result == null) return;
+      final position = appState.location.position;
+      final origin = position == null
+          ? null
+          : detectFareOrigin(
+              position.latitude,
+              position.longitude,
+              data.fareOrigins,
+            );
+      final now = DateTime.now();
+      final messenger = ScaffoldMessenger.of(context);
+      await context.read<TripStore>().addTrip(
+            TripRecord(
+              id: now.microsecondsSinceEpoch.toString(),
+              destinationId: destination.id,
+              destinationName: destination.name,
+              originZone: origin?.zone ?? '',
+              vehicleLabel: data.routeForDestination(destination)?.serviceLabel ?? '',
+              fare: result.amount,
+              discounted: result.discounted,
+              passengers: 1,
+              total: result.amount,
+              savedAt: now,
+            ),
+          );
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Trip saved to history')),
+        );
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(destination.name)),
       body: ListView(
@@ -95,6 +131,7 @@ class _ResultScreenState extends State<ResultScreen> {
             title: 'Estimated Tricycle Fare',
             child: _FareSection(
               estimate: estimate,
+              onSaveTrip: saveTrip,
               applyDiscount: _applyDiscount,
               onToggleDiscount: (value) =>
                   setState(() => _applyDiscount = value),
@@ -273,12 +310,14 @@ class _OfflineLabel extends StatelessWidget {
 class _FareSection extends StatelessWidget {
   const _FareSection({
     required this.estimate,
+    required this.onSaveTrip,
     required this.applyDiscount,
     required this.onToggleDiscount,
     required this.hasDistance,
   });
 
   final FareEstimate? estimate;
+  final VoidCallback onSaveTrip;
   final bool applyDiscount;
   final ValueChanged<bool> onToggleDiscount;
   final bool hasDistance;
@@ -348,6 +387,12 @@ class _FareSection extends StatelessWidget {
                 '(${Discount.matrix.percent.round()}% off)',
               ),
             ),
+          const SizedBox(height: 6),
+          OutlinedButton.icon(
+            onPressed: onSaveTrip,
+            icon: const Icon(Icons.bookmark_add_outlined),
+            label: const Text('Save to trip history'),
+          ),
         ],
       ],
     );

@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -76,8 +78,10 @@ private val SELECTED_RADIUS_DP = 26f
 @Composable
 fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showTerminals by rememberSaveable { mutableStateOf(false) }
+    var showHistory by rememberSaveable { mutableStateOf(false) }
 
     val permissions = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -132,11 +136,14 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             routePoints = emptyList(),
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
+            onShowHistory = { showHistory = true },
             bottomContent = {
                 DestinationSheet(
                     destinations = s.data.destinations,
                     terminals = s.data.terminals,
                     routes = s.data.routes,
+                    favoriteIds = favoriteIds,
+                    onToggleFavorite = viewModel::toggleFavorite,
                     onSelect = viewModel::onDestinationSelected,
                     onShowTerminals = { showTerminals = true },
                 )
@@ -200,8 +207,16 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
                     terminals = s.data.terminals,
                     onSelectNew = viewModel::selectNewDestination,
                     onToggleDiscount = viewModel::toggleDiscount,
+                    onSaveTrip = { viewModel.saveCurrentTrip() },
                 )
             },
+        )
+    }
+
+    if (showHistory) {
+        HistorySheet(
+            viewModel = viewModel,
+            onDismiss = { showHistory = false },
         )
     }
 
@@ -254,6 +269,7 @@ private fun TripMap(
     onLocateMe: () -> Unit,
     busStops: List<RouteStop> = emptyList(),
     busColorHex: String = "#FFFFFF",
+    onShowHistory: () -> Unit = {},
     bottomContent: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -376,6 +392,18 @@ private fun TripMap(
                 mv.invalidate()
             },
         )
+        FloatingActionButton(
+            onClick = onShowHistory,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(top = 16.dp, end = 76.dp),
+            containerColor = androidx.compose.ui.graphics.Color.White,
+            contentColor = SagayColors.TealPrimary,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        ) {
+            Icon(Icons.Default.History, contentDescription = "Trip history")
+        }
         FloatingActionButton(
             onClick = {
                 locateRequest += 1

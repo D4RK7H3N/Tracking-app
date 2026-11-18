@@ -3,6 +3,7 @@ package com.sagay.touristnav.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sagay.touristnav.data.local.SeedLoader
+import com.sagay.touristnav.data.local.entities.TripRecordEntity
 import com.sagay.touristnav.data.repo.TripRepository
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.RouteSummary
@@ -30,6 +31,12 @@ class TripViewModel @Inject constructor(
     private val _state = MutableStateFlow<UiState>(UiState.NeedsPermission)
     val state: StateFlow<UiState> = _state.asStateFlow()
 
+    private val _favoriteIds = MutableStateFlow<Set<String>>(emptySet())
+    val favoriteIds: StateFlow<Set<String>> = _favoriteIds.asStateFlow()
+
+    private val _history = MutableStateFlow<List<TripRecordEntity>>(emptyList())
+    val history: StateFlow<List<TripRecordEntity>> = _history.asStateFlow()
+
     private var mapData = MapData(
         position = LocationFix(SAGAY_CENTER_LAT, SAGAY_CENTER_LNG),
         destinations = emptyList(),
@@ -55,6 +62,12 @@ class TripViewModel @Inject constructor(
     private var isOnline = false
 
     init {
+        viewModelScope.launch {
+            repository.favoriteIds.collect { ids -> _favoriteIds.value = ids.toSet() }
+        }
+        viewModelScope.launch {
+            repository.tripHistory.collect { records -> _history.value = records }
+        }
         viewModelScope.launch {
             repository.pendingTrip()?.let { trip ->
                 pendingTripId = trip.id
@@ -195,6 +208,26 @@ class TripViewModel @Inject constructor(
         fetchJob?.cancel()
         fetchJob = null
         _state.value = UiState.MapReady(mapData)
+    }
+
+    fun saveCurrentTrip(passengers: Int = 1) {
+        val trip = (_state.value as? UiState.ResultShown)?.trip ?: return
+        viewModelScope.launch { repository.saveTrip(trip, passengers) }
+    }
+
+    fun toggleFavorite(destinationId: String) {
+        viewModelScope.launch {
+            val favorite = destinationId !in _favoriteIds.value
+            repository.toggleFavorite(destinationId, favorite)
+        }
+    }
+
+    fun deleteTrip(id: Long) {
+        viewModelScope.launch { repository.deleteTrip(id) }
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch { repository.clearHistory() }
     }
 
     private fun maybeResumePendingTrip() {

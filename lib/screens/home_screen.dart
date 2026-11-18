@@ -7,10 +7,12 @@ import 'package:provider/provider.dart';
 import '../models/app_data.dart';
 import '../models/destination.dart';
 import '../services/location_service.dart' show LocationStatus;
+import '../services/trip_store.dart';
 import '../state/app_state.dart';
 import '../theme/motion.dart';
 import '../widgets/compass_indicator.dart';
 import '../widgets/motion_button.dart';
+import 'history_screen.dart';
 import 'result_screen.dart';
 
 /// Home screen: a full-screen map with the user's position and destination
@@ -72,6 +74,18 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Sagay Tourist Navigator'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'Trip history',
+            onPressed: () => Navigator.of(context).push(
+              SagayPageRoute<void>(
+                context: context,
+                child: const HistoryScreen(),
+              ),
+            ),
+          ),
+        ],
       ),
       body: appState.dataLoading
           ? const Center(child: CircularProgressIndicator())
@@ -151,12 +165,16 @@ class _MapWithSheetState extends State<_MapWithSheet>
   String _query = '';
   bool _mapReady = false;
   Position? _lastCenteredPosition;
+  Set<String> _favorites = <String>{};
 
   @override
   void initState() {
     super.initState();
     _lastCenteredPosition = widget.appState.location.position;
     _zoomController.addListener(_applyZoom);
+    context.read<TripStore>().favorites().then((values) {
+      if (mounted) setState(() => _favorites = values);
+    });
   }
 
   @override
@@ -379,6 +397,15 @@ class _MapWithSheetState extends State<_MapWithSheet>
                                 return _DestinationTile(
                                   destination: filtered[index],
                                   data: widget.data,
+                                  favorite: _favorites.contains(filtered[index].id),
+                                  onToggleFavorite: () async {
+                                    final store = context.read<TripStore>();
+                                    await store.toggleFavorite(filtered[index].id);
+                                    final values = await store.favorites();
+                                    if (mounted) {
+                                      setState(() => _favorites = values);
+                                    }
+                                  },
                                   onTap: () => _openResult(filtered[index]),
                                 );
                               },
@@ -474,11 +501,15 @@ class _DestinationTile extends StatelessWidget {
   const _DestinationTile({
     required this.destination,
     required this.data,
+    required this.favorite,
+    required this.onToggleFavorite,
     required this.onTap,
   });
 
   final Destination destination;
   final AppData data;
+  final bool favorite;
+  final VoidCallback onToggleFavorite;
   final VoidCallback onTap;
 
   @override
@@ -500,7 +531,20 @@ class _DestinationTile extends StatelessWidget {
       subtitle: Text(
         '${destination.category} • ${terminal?.colorName ?? "Unknown"} tricycle',
       ),
-      trailing: const Icon(Icons.chevron_right),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: Icon(
+              favorite ? Icons.star : Icons.star_border,
+              color: favorite ? const Color(0xFFEF6C00) : null,
+            ),
+            tooltip: favorite ? 'Remove from favourites' : 'Add to favourites',
+            onPressed: onToggleFavorite,
+          ),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
       onTap: onTap,
     );
   }
