@@ -468,8 +468,9 @@ private fun TripMap(
         ZoomControls(
             onZoom = smoothZoom,
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 12.dp),
+                .align(Alignment.TopEnd)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(top = 80.dp, end = 16.dp),
         )
         Box(
             modifier = Modifier

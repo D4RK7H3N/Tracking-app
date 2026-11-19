@@ -142,16 +142,9 @@ class TripEstimator @Inject constructor() {
         if (landVehicle == null) {
             return FareScope.Unverified
         }
-        if (landVehicle == VehicleType.BUS) {
-            return FareScope.Bus
-        }
-        if (landVehicle == VehicleType.BOAT) {
-            // A boat route that is not an island destination has no priced
-            // land leg to show.
-            return FareScope.Unverified
-        }
 
         val tricycle = tricycleFare(
+            vehicle = landVehicle,
             origin = origin,
             matrixEntry = matrixEntry,
             fareRule = fareRule,
@@ -170,6 +163,7 @@ class TripEstimator @Inject constructor() {
      * distance estimate keeps its single value.
      */
     private fun tricycleFare(
+        vehicle: VehicleType,
         origin: FareOrigin?,
         matrixEntry: FareMatrixEntry?,
         fareRule: FareRule,
@@ -177,11 +171,16 @@ class TripEstimator @Inject constructor() {
         destinationZone: String?,
         discounted: Boolean,
     ): FareScope.MotorizedTricycle {
+        val qualifier = if (vehicle == VehicleType.TRICYCLE) {
+            ""
+        } else {
+            " (zone fare; ${vehicle.displayName.lowercase()} fare not published)"
+        }
         if (matrixEntry != null) {
             return FareScope.MotorizedTricycle(
                 amount = if (discounted) matrixEntry.discountedFare else matrixEntry.regularFare,
                 isOfficial = true,
-                basis = "Official fare matrix: ${origin?.name} \u2192 ${destinationZone}",
+                basis = "Official fare matrix: ${origin?.name} \u2192 $destinationZone$qualifier",
             )
         }
         val estimate = FareCalculator.compute(fareRule, roadKm)

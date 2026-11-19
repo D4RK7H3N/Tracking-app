@@ -173,12 +173,14 @@ class TripEstimatorTest {
     }
 
     @Test
-    fun `a bus ride has no fare`() {
+    fun `a bus ride uses the published zone fare as an estimate`() {
         val trip = estimate(
             destination = destination("R-BULANON", fareZone = "BRGY. BULANON"),
             route = route("R-BULANON", VehicleType.BUS),
         )
-        assertEquals(FareScope.Bus, trip.fare)
+        val fare = trip.fare as FareScope.MotorizedTricycle
+        assertEquals(30.0, fare.amount, 0.001)
+        assertTrue(fare.basis.contains("bus fare not published"))
     }
 
     @Test
@@ -227,13 +229,14 @@ class TripEstimatorTest {
     }
 
     @Test
-    fun `the discount never applies to a bus fare`() {
+    fun `the discount applies to the published zone fare on a bus route`() {
         val trip = estimate(
             destination = destination("R-BULANON", fareZone = "BRGY. BULANON"),
             route = route("R-BULANON", VehicleType.BUS),
             discounted = true,
         )
-        assertEquals(FareScope.Bus, trip.fare)
+        val fare = trip.fare as FareScope.MotorizedTricycle
+        assertEquals(24.0, fare.amount, 0.001)
     }
 
     @Test
@@ -254,7 +257,7 @@ class TripEstimatorTest {
             destination = destination("R-BULANON", fareZone = "BRGY. BULANON"),
             route = route("R-BULANON", VehicleType.BUS),
         )
-        assertTrue(!busTrip.fare.canDiscount)
+        assertTrue(busTrip.fare.canDiscount)
     }
 
     @Test

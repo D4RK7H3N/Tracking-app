@@ -175,6 +175,7 @@ class _MapWithSheetState extends State<_MapWithSheet>
   );
 
   String _query = '';
+  String _routeFilter = 'All';
   bool _mapReady = false;
   Position? _lastCenteredPosition;
   Set<String> _favorites = <String>{};
@@ -309,8 +310,8 @@ class _MapWithSheetState extends State<_MapWithSheet>
         ),
 
         Positioned(
-          left: 12,
-          top: 72,
+          right: 12,
+          top: 84,
           child: Column(
             children: [
               MotionIconButton(
@@ -387,6 +388,27 @@ class _MapWithSheetState extends State<_MapWithSheet>
                       ),
                     ),
                   ),
+                  SizedBox(
+                    height: 40,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      children: [
+                        for (final label in const [
+                          'All', 'Red', 'Yellow', 'Pink', 'Bus', 'Boat',
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: FilterChip(
+                              label: Text(label),
+                              selected: _routeFilter == label,
+                              onSelected: (_) =>
+                                  setState(() => _routeFilter = label),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                   // Location problem banner (hidden when all is well).
                   AnimatedSize(
                     duration: Motion.duration(context, Motion.layout),
@@ -442,19 +464,21 @@ class _MapWithSheetState extends State<_MapWithSheet>
     );
   }
 
-  /// Filters destinations by name or category, case-insensitively.
   List<Destination> _filteredDestinations() {
     final query = _query.trim().toLowerCase();
-    if (query.isEmpty) {
-      return widget.data.destinations;
-    }
-    return widget.data.destinations
-        .where(
-          (d) =>
-              d.name.toLowerCase().contains(query) ||
-              d.category.toLowerCase().contains(query),
-        )
-        .toList();
+    return widget.data.destinations.where((destination) {
+      final matchesQuery = query.isEmpty ||
+          destination.name.toLowerCase().contains(query) ||
+          destination.category.toLowerCase().contains(query);
+      final route = widget.data.routeById(destination.routeId);
+      final matchesRoute = switch (_routeFilter) {
+        'Bus' => route?.vehicle.toLowerCase() == 'bus',
+        'Boat' => destination.boat || route?.vehicle.toLowerCase() == 'boat',
+        'All' => true,
+        _ => route?.colorName.toLowerCase() == _routeFilter.toLowerCase(),
+      };
+      return matchesQuery && matchesRoute;
+    }).toList();
   }
 
   /// User marker (blue dot) + one marker per destination, coloured by the

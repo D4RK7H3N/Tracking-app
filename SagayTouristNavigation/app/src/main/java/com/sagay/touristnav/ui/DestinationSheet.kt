@@ -1,13 +1,11 @@
 package com.sagay.touristnav.ui
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,6 +26,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -53,6 +53,7 @@ import com.sagay.touristnav.R
 import com.sagay.touristnav.domain.models.Destination
 import com.sagay.touristnav.domain.models.Route
 import com.sagay.touristnav.domain.models.Terminal
+import com.sagay.touristnav.domain.models.VehicleType
 
 @Composable
 fun DestinationSheet(
@@ -65,14 +66,22 @@ fun DestinationSheet(
     onShowTerminals: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    val filtered = remember(destinations, query) {
+    var routeFilter by rememberSaveable { mutableStateOf("All") }
+    val filters = listOf("All", "Red", "Yellow", "Pink", "Bus", "Boat")
+    val filtered = remember(destinations, query, routes, routeFilter) {
         val q = query.trim().lowercase()
-        if (q.isEmpty()) {
-            destinations
-        } else {
-            destinations.filter {
-                it.name.lowercase().contains(q) || it.category.lowercase().contains(q)
+        destinations.filter { destination ->
+            val matchesQuery = q.isEmpty() ||
+                destination.name.lowercase().contains(q) ||
+                destination.category.lowercase().contains(q)
+            val route = routes[destination.routeId]
+            val matchesRoute = when (routeFilter) {
+                "Bus" -> route?.vehicle == VehicleType.BUS
+                "Boat" -> destination.requiresBoat || route?.vehicle == VehicleType.BOAT
+                "All" -> true
+                else -> route?.colorName.equals(routeFilter, ignoreCase = true) == true
             }
+            matchesQuery && matchesRoute
         }
     }
 
@@ -110,21 +119,28 @@ fun DestinationSheet(
                 ),
             )
             TerminalsButton(onShowTerminals)
-            AnimatedContent(
-                targetState = filtered.isEmpty(),
-                transitionSpec = {
-                    fadeIn(tween(layoutDuration)) togetherWith fadeOut(tween(layoutDuration))
-                },
-                label = "destination-list",
-                modifier = Modifier.fillMaxSize(),
-            ) { empty ->
-                if (empty) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No destinations match your search.")
-                    }
-                } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                filters.forEach { label ->
+                    FilterChip(
+                        selected = routeFilter == label,
+                        onClick = { routeFilter = label },
+                        label = { Text(label) },
+                    )
+                }
+            }
+            if (filtered.isEmpty()) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text("No destinations match your search.")
+                }
+            } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(bottom = 16.dp),
                 ) {
                     items(filtered, key = { it.id }) { destination ->
@@ -201,7 +217,6 @@ fun DestinationSheet(
                             modifier = Modifier.clickable { onSelect(destination) },
                         )
                     }
-                }
                 }
             }
         }
