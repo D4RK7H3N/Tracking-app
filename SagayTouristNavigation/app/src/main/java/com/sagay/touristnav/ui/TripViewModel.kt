@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.sagay.touristnav.data.local.SeedLoader
 import com.sagay.touristnav.data.local.entities.TripRecordEntity
 import com.sagay.touristnav.data.repo.TripRepository
+import com.sagay.touristnav.domain.Haversine
 import com.sagay.touristnav.domain.JourneyGuidance
 import com.sagay.touristnav.domain.TripSummary
 import com.sagay.touristnav.domain.models.Destination
+import com.sagay.touristnav.domain.models.RoutePoint
 import com.sagay.touristnav.domain.models.RouteSummary
 import com.sagay.touristnav.domain.models.Terminal
 import com.sagay.touristnav.domain.models.TripEstimate
@@ -343,24 +345,42 @@ class TripViewModel @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: IOException) {
-            if (isOnline) {
-                _state.value = UiState.RouteError(
-                    data = mapData,
-                    selected = destination,
-                    terminal = terminal,
-                    message = e.message ?: "Could not fetch the route.",
-                )
+            val resolvedTerminal = terminal ?: fallbackTerminal(destination)
+            val targetLat = if (destination.requiresBoat) {
+                resolvedTerminal.lat
             } else {
-                val savedId = runCatching {
-                    repository.savePendingTrip(origin, destination.id, pendingTripId)
-                }.getOrNull()
-                if (savedId != null) {
-                    pendingTripId = savedId
-                    pendingOrigin = origin
-                    pendingDestinationId = destination.id
-                }
-                _state.value = UiState.WaitingForInternet(mapData, destination, terminal)
+                destination.lat
             }
+            val targetLng = if (destination.requiresBoat) {
+                resolvedTerminal.lng
+            } else {
+                destination.lng
+            }
+            val straightKm = Haversine.km(origin.lat, origin.lng, targetLat, targetLng)
+            val estimatedKm = straightKm * 1.3
+            val fallback = RouteSummary(
+                roadKm = estimatedKm,
+                durationMinutes = estimatedKm / 20.0 * 60.0,
+                points = listOf(
+                    RoutePoint(origin.lat, origin.lng),
+                    RoutePoint(targetLat, targetLng),
+                ),
+            )
+            cachedRoute = fallback
+            cachedOrigin = origin
+            cachedDestination = destination
+            cachedTerminal = resolvedTerminal
+            clearPendingTrip()
+            _state.value = UiState.ResultShown(
+                mapData,
+                repository.estimateTrip(
+                    origin = origin,
+                    destination = destination,
+                    terminal = resolvedTerminal,
+                    route = fallback,
+                    discounted = discounted,
+                ),
+            )
         } catch (e: Exception) {
             _state.value = UiState.RouteError(
                 data = mapData,
