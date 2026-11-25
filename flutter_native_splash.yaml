@@ -2,8 +2,11 @@
 # Regenerate after changing art/colors with:
 #   dart run flutter_native_splash:create
 flutter_native_splash:
-  color: "#004D40"
+  color: "#0B3C5D"
   image: assets/icon/icon_foreground.png
+  ios: true
+  android: true
+  web: false
   android_12:
-    color: "#004D40"
+    color: "#0B3C5D"
     image: assets/icon/icon_foreground.png

@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.SagayTouristNavigation" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="colorControlNormal">#FF00695C</item>
+        <item name="colorControlNormal">@color/deep_ocean</item>
+        <item name="android:windowBackground">@color/warm_mist</item>
+        <item name="android:navigationBarColor">@color/warm_mist</item>
     </style>
 
     <style name="Theme.SagayTouristNavigation.Starting" parent="Theme.SplashScreen">

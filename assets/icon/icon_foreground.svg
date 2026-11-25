@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Adaptive-icon foreground / splash art for Sagay Tourist Navigator.
+  Transparent background so the Deep Ocean OS mask and splash colour (#0B3C5D)
+  show through. Warm Mist route, Sunrise Gold pin, Coral accents.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 108 108">
+  <path d="M22,72 C34,70 36,48 52,48 C66,48 76,54 84,34"
+        fill="none" stroke="#F7F9F8" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="22" cy="72" r="2.6" fill="#FF6B52"/>
+  <path d="M84,20 C77.37,20 72,25.37 72,32 C72,42.5 84,56 84,56 S96,42.5 96,32 C96,25.37 90.63,20 84,20 Z"
+        fill="#FFB347"/>
+  <circle cx="84" cy="32" r="5" fill="#FF6B52"/>
+</svg>

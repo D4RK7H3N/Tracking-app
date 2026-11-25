@@ -5,6 +5,10 @@ runner. A Windows machine cannot compile iOS apps, so the build always happens
 in CI — either by pushing a `v...` tag or by running the **iOS build** workflow
 manually from the Actions tab.
 
+> **Distribution scope:** this workflow produces sideloadable and simulator
+> builds only. There is **no App Store or TestFlight release**; even a signed
+> IPA (below) is installed by sideloading, not submitted to Apple.
+
 ## Artifacts
 
 Each run produces these files in the `ios-builds` workflow artifact, and a tag
@@ -46,8 +50,13 @@ repository secrets under **Settings → Secrets and variables → Actions**:
 
 A paid Apple Developer Program membership is required for distribution
 certificates. With these secrets present, CI also emits `sagay-signed.ipa`.
+This is still a **sideloaded** build (installed with Sideloadly/AltStore or over
+the same trust flow above) — it is not an App Store or TestFlight release.
 
 ## Local builds
+
+The `ios/Runner` Xcode project, `Podfile` and `Info.plist` are being finalized
+alongside these docs; the commands below apply once those files are in place.
 
 On a Mac with Xcode:
 

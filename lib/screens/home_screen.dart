@@ -7,15 +7,17 @@ import 'package:provider/provider.dart';
 import '../models/app_data.dart';
 import '../models/destination.dart';
 import '../services/location_service.dart' show LocationStatus;
-import '../services/offline_map_pack.dart';
 import '../services/trip_store.dart';
 import '../state/app_state.dart';
 import '../theme/motion.dart';
 import '../widgets/compass_indicator.dart';
+import '../widgets/map_tile_layer.dart';
 import '../widgets/motion_button.dart';
+import 'fare_calculator_screen.dart';
 import 'history_screen.dart';
 import 'offline_map_screen.dart';
 import 'result_screen.dart';
+import 'settings_screen.dart';
 
 /// Home screen: a full-screen map with the user's position and destination
 /// markers, plus a draggable searchable destination list at the bottom.
@@ -77,6 +79,26 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Sagay Tourist Navigator'),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calculate_outlined),
+            tooltip: 'Fare calculator',
+            onPressed: () => Navigator.of(context).push(
+              SagayPageRoute<void>(
+                context: context,
+                child: const FareCalculatorScreen(),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings & data',
+            onPressed: () => Navigator.of(context).push(
+              SagayPageRoute<void>(
+                context: context,
+                child: const SettingsScreen(),
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.map_outlined),
             tooltip: 'Offline map pack',
@@ -179,7 +201,6 @@ class _MapWithSheetState extends State<_MapWithSheet>
   bool _mapReady = false;
   Position? _lastCenteredPosition;
   Set<String> _favorites = <String>{};
-  String? _localTilePattern;
 
   @override
   void initState() {
@@ -189,9 +210,7 @@ class _MapWithSheetState extends State<_MapWithSheet>
     context.read<TripStore>().favorites().then((values) {
       if (mounted) setState(() => _favorites = values);
     });
-    OfflineMapPack().localTilePattern().then((pattern) {
-      if (mounted) setState(() => _localTilePattern = pattern);
-    });
+    // Tile source is shared through AppState and refreshed on download.
   }
 
   @override
@@ -270,14 +289,7 @@ class _MapWithSheetState extends State<_MapWithSheet>
             ),
           ),
           children: [
-            TileLayer(
-              urlTemplate: _localTilePattern ??
-                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              tileProvider: _localTilePattern == null
-                  ? NetworkTileProvider()
-                  : FileTileProvider(),
-              userAgentPackageName: 'ph.sagay.sagay_tourist_navigator',
-            ),
+            MapTileLayer(tiles: appState.mapTiles.source),
             MarkerLayer(markers: _buildMarkers(position)),
           ],
         ),
@@ -338,7 +350,7 @@ class _MapWithSheetState extends State<_MapWithSheet>
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                    const BorderRadius.vertical(top: Radius.circular(28)),
                 boxShadow: const [
                   BoxShadow(
                     color: Colors.black26,

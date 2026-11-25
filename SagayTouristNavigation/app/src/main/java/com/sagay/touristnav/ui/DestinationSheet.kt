@@ -67,8 +67,8 @@ fun DestinationSheet(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var routeFilter by rememberSaveable { mutableStateOf("All") }
-    val filters = listOf("All", "Red", "Yellow", "Pink", "Bus", "Boat")
-    val filtered = remember(destinations, query, routes, routeFilter) {
+    val filters = listOf("All", "Starred", "Red", "Yellow", "Pink", "Bus", "Boat")
+    val filtered = remember(destinations, query, routes, routeFilter, favoriteIds) {
         val q = query.trim().lowercase()
         destinations.filter { destination ->
             val matchesQuery = q.isEmpty() ||
@@ -76,6 +76,7 @@ fun DestinationSheet(
                 destination.category.lowercase().contains(q)
             val route = routes[destination.routeId]
             val matchesRoute = when (routeFilter) {
+                "Starred" -> destination.id in favoriteIds
                 "Bus" -> route?.vehicle == VehicleType.BUS
                 "Boat" -> destination.requiresBoat || route?.vehicle == VehicleType.BOAT
                 "All" -> true
@@ -96,7 +97,7 @@ fun DestinationSheet(
                     easing = Motion.easing,
                 ),
             ),
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp,
     ) {
@@ -134,9 +135,44 @@ fun DestinationSheet(
                     )
                 }
             }
+            Text(
+                "${filtered.size} destination${if (filtered.size == 1) "" else "s"}" +
+                    if (routeFilter == "All") "" else " \u00B7 $routeFilter",
+                style = MaterialTheme.typography.labelMedium,
+                color = SagayColors.SecondaryTeal,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+            )
             if (filtered.isEmpty()) {
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Text("No destinations match your search.")
+                Box(
+                    modifier = Modifier.weight(1f).padding(16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null,
+                            tint = SagayColors.InkMuted,
+                            modifier = Modifier.size(32.dp),
+                        )
+                        Spacer(Modifier.size(8.dp))
+                        Text(
+                            "No destinations match.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            "Try another search or filter.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        TextButton(
+                            onClick = {
+                                query = ""
+                                routeFilter = "All"
+                            },
+                        ) {
+                            Text("Clear filters")
+                        }
+                    }
                 }
             } else {
                 LazyColumn(
@@ -177,7 +213,7 @@ fun DestinationSheet(
                                             .background(
                                                 Color(
                                                     parseHexColor(
-                                                        route?.colorHex,
+                                                        route?.colorHex ?: terminal?.colorHex,
                                                     ),
                                                 ),
                                             ),

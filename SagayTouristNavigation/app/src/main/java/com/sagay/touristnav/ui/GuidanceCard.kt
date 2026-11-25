@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sagay.touristnav.domain.GuidanceSnapshot
+import java.util.Locale
 
 @Composable
 fun GuidanceCard(
@@ -37,10 +38,16 @@ fun GuidanceCard(
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                "${String.format("%.1f", snapshot.remainingKm)} km remaining",
+                "${String.format(Locale.US, "%.1f", snapshot.remainingKm)} km remaining",
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Black,
                 color = SagayColors.TealPrimary,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "${String.format(Locale.US, "%.1f", snapshot.travelledKm)} km travelled",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
             LinearProgressIndicator(

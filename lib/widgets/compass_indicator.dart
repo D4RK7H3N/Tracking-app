@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 
+import '../theme/motion.dart';
+
 /// A live compass badge drawn over the maps.
 ///
 /// The red needle keeps pointing at the top edge of the map (true map
@@ -65,7 +67,8 @@ class _CompassIndicatorState extends State<CompassIndicator> {
     setState(() {
       _hasHeading = true;
       _calibrated = accuracy != null && accuracy < 15;
-      _needleAngle += diff * 0.25;
+      // Reduced motion: jump straight to the reading instead of gliding.
+      _needleAngle = Motion.reduced(context) ? target : _needleAngle + diff * 0.25;
     });
   }
 
@@ -87,7 +90,7 @@ class _CompassIndicatorState extends State<CompassIndicator> {
         children: [
           AnimatedRotation(
             turns: _needleAngle / (2 * math.pi),
-            duration: const Duration(milliseconds: 250),
+            duration: Motion.duration(context, const Duration(milliseconds: 250)),
             child: Icon(
               Icons.navigation,
               size: widget.size * 0.55,

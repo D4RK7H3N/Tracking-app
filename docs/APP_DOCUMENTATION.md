@@ -1,6 +1,6 @@
 # Sagay Tourist Navigation — App Documentation
 
-**Version:** 1.0.0 (versionCode 1) · **Package:** `com.sagay.touristnav`
+**Version:** 1.1.0 (versionCode 2, current native release) · **Package:** `com.sagay.touristnav`
 **Platform:** Android 9+ (minSdk 28), targets Android 15 (targetSdk 35)
 **Implementation:** native Kotlin + Jetpack Compose (`SagayTouristNavigation/`)
 
@@ -12,8 +12,8 @@ which port to take a boat from for island/reef spots.
 
 > This document describes the shipping **native Android** app. The repo also
 > contains an earlier **Flutter** prototype (`lib/`), documented in the root
-> [README](../README.md). For the v1.0.0 changelog see
-> [RELEASE_NOTES](../SagayTouristNavigation/RELEASE_NOTES.md).
+> [README](../README.md). For the changelog (v1.1.0 current, with the v1.0.0
+> history below it) see [RELEASE_NOTES](../SagayTouristNavigation/RELEASE_NOTES.md).
 
 ---
 
@@ -74,7 +74,10 @@ Result preserved across rotation (landscape):
 - Straight-line (Haversine) sanity check on road distance.
 - Offline persistence: bundled seed data + saved pending trips (Room/SQLite).
 - Rotation-safe UI state; responsive Locate Me; map zoom controls.
-- Branded adaptive launcher icon and calm-teal "Sunrise Route" theme.
+- Branded adaptive launcher icon and the Deep Ocean / Coral visual identity
+  (the vehicle glyphs and data-driven route colours are unchanged).
+- First-run onboarding, an offline fare calculator with group totals, and a
+  Settings & data sheet (reduce-motion override, clear history, data caveat).
 
 **Out of scope by design:** booking, payments, real-time vehicle tracking, user
 accounts, turn-by-turn voice navigation, boat-leg pricing.
@@ -108,7 +111,7 @@ di/          AppModule, DatabaseModule, NetworkModule (Hilt)
 | `FareCalculator` | Pure stepped-fare formula with cap. |
 | `Haversine` | Great-circle distance + road-distance sanity check. |
 | `SeedLoader` | Mutex-guarded, once-per-process upsert of bundled `seed.json`. |
-| `AppDatabase` | Room v8; migration 7→8 adds the owner-supplied `route_access` table. |
+| `AppDatabase` | Room v9; migrations 2→3 … 8→9, the last adding the `trip_record` and `favorite` tables (see §6). |
 | `LocationProvider` | One high-accuracy fused fix, `null` on any failure. |
 | `ConnectivityObserver` | `callbackFlow` of validated-internet availability. |
 
@@ -151,7 +154,7 @@ NeedsPermission ──grant──> Locating ──fix──> MapReady
 
 ## 6. Data model & persistence
 
-Room database `sagay_tourist_nav.db`, **version 8**.
+Room database `sagay_tourist_nav.db`, **version 9**.
 
 | Entity | Table | Notes |
 | --- | --- | --- |
@@ -164,6 +167,8 @@ Room database `sagay_tourist_nav.db`, **version 8**.
 | `RouteEntity` | `route` | id, name, `terminalId`, `colorHex`, `colorName`, `vehicle`. |
 | `RouteStopEntity` | `route_stop` | `routeId`, `stopOrder`, name, lat/lng. |
 | `RouteAccessEntity` | `route_access` | `originZone`, `destinationRouteId`, `viaRouteId`, `changeAt`, `fareZone`. |
+| `TripRecordEntity` | `trip_record` | Saved trip history: destination, origin zone, vehicle, fare, passengers, total, `savedAt` (added in v9). |
+| `FavoriteEntity` | `favorite` | Starred destinations: `destinationId`, `savedAt` (added in v9). |
 
 `TripStateEntity.status`: `PENDING_ROUTE` (saved, awaiting connectivity) →
 `DONE` (route fetched).
@@ -176,10 +181,13 @@ clearing app data, and never touches `trip_state`. The routes, their stops, the
 fare matrix and the access rules are upserted the same way.
 
 **Migrations.** `MIGRATION_2_3` adds `fare_rule.maxFare` via
-`ALTER TABLE … ADD COLUMN`, preserving existing rows (including saved trips). `MIGRATION_3_4` adds the fare
-matrix and its origins, `MIGRATION_6_7` generalises the bus routes into routes,
-and `MIGRATION_7_8` adds the `route_access` table. Every migration keeps the
-saved trips.
+`ALTER TABLE … ADD COLUMN`, preserving existing rows (including saved trips).
+`MIGRATION_3_4` adds the fare matrix and its origins, `MIGRATION_4_5` adds the
+terminal's `vehicles` column, `MIGRATION_5_6` adds the bus routes and their
+stops, `MIGRATION_6_7` generalises those into routes and route stops, and
+`MIGRATION_7_8` adds the owner-supplied `route_access` table. `MIGRATION_8_9`
+creates the **trip history (`trip_record`) and favourites (`favorite`)** tables.
+Every migration keeps the saved trips.
 `fallbackToDestructiveMigration()` remains only as a last resort for unknown
 future schema jumps.
 
@@ -273,6 +281,10 @@ published fare when the detected origin zone and the destination's matrix
 route are in the same table. The published label is inconsistent, so lookups
 compare the label, the label without its parenthetical, and its last path
 segment ("BRGY. PARAISO/FABRICA" also matches a "BRGY. FABRICA" row).
+
+The bundled matrix has **40 stored rows**: 39 published across the five origin
+tables plus one owner-supplied Old Sagay → Sagay City corridor row used by the
+`route_access` rule described above.
 
 The 20% student / senior citizen / PWD fare is a toggle on the result card.
 It is offered only for an official matrix fare, because the distance

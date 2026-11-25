@@ -27,11 +27,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sagay.touristnav.platform.OfflineMapPack
+import java.io.IOException
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OfflinePackSheet(onDismiss: () -> Unit) {
+fun OfflinePackSheet(
+    onDismiss: () -> Unit,
+    onPackChanged: () -> Unit = {},
+) {
     val context = LocalContext.current
     val pack = remember { OfflineMapPack(context) }
     val scope = rememberCoroutineScope()
@@ -41,6 +45,7 @@ fun OfflinePackSheet(onDismiss: () -> Unit) {
     var progress by remember { mutableIntStateOf(0) }
     val total = remember { pack.tileCount() }
     var downloading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -76,6 +81,8 @@ fun OfflinePackSheet(onDismiss: () -> Unit) {
                         pack.delete()
                         downloaded = false
                         sizeBytes = 0L
+                        error = null
+                        onPackChanged()
                     }
                 }) {
                     Text("Delete offline map")
@@ -99,11 +106,18 @@ fun OfflinePackSheet(onDismiss: () -> Unit) {
                 Button(
                     onClick = {
                         downloading = true
+                        error = null
                         scope.launch {
-                            pack.download { done, _ -> progress = done }
-                            downloaded = true
-                            sizeBytes = pack.sizeBytes()
-                            downloading = false
+                            try {
+                                pack.download { done, _ -> progress = done }
+                                downloaded = true
+                                sizeBytes = pack.sizeBytes()
+                                onPackChanged()
+                            } catch (e: IOException) {
+                                error = e.message ?: "Download failed. Check your connection."
+                            } finally {
+                                downloading = false
+                            }
                         }
                     },
                     enabled = !downloading,
@@ -111,6 +125,14 @@ fun OfflinePackSheet(onDismiss: () -> Unit) {
                 ) {
                     Text(if (downloading) "Downloading…" else "Download offline map")
                 }
+            }
+            error?.let { message ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
             Spacer(Modifier.height(20.dp))
         }

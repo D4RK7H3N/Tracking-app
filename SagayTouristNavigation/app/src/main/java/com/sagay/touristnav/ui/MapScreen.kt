@@ -12,8 +12,13 @@ import android.graphics.Paint
 import android.graphics.drawable.BitmapDrawable
 import android.view.animation.DecelerateInterpolator
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -24,6 +29,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -31,8 +37,10 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -40,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -51,6 +60,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -85,6 +95,15 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
     var showTerminals by rememberSaveable { mutableStateOf(false) }
     var showHistory by rememberSaveable { mutableStateOf(false) }
     var showOfflinePack by rememberSaveable { mutableStateOf(false) }
+    var showFareCalculator by rememberSaveable { mutableStateOf(false) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+    // Bumped when an offline pack is downloaded/deleted so the live map
+    // switches tile providers immediately, in any UI state.
+    var packVersion by remember { mutableIntStateOf(0) }
+    val openHistory = { showHistory = true }
+    val openOfflinePack = { showOfflinePack = true }
+    val openFareCalculator = { showFareCalculator = true }
+    val openSettings = { showSettings = true }
 
     val permissions = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -115,7 +134,10 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
         }
     }
 
-    when (val s = state) {
+    // The map is the base layer; the fare tool is a full-screen overlay so it
+    // works identically in every UiState (including pre-permission states).
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (val s = state) {
         is UiState.NeedsPermission -> PermissionPrompt(
             title = "Location needed",
             message = "Sagay Tourist Navigation needs your location to measure " +
@@ -139,8 +161,11 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             routePoints = emptyList(),
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
-            onShowHistory = { showHistory = true },
-            onShowOfflinePack = { showOfflinePack = true },
+            onShowHistory = openHistory,
+            onShowOfflinePack = openOfflinePack,
+            onShowFareCalculator = openFareCalculator,
+            onShowSettings = openSettings,
+            packVersion = packVersion,
             bottomContent = {
                 DestinationSheet(
                     destinations = s.data.destinations,
@@ -160,6 +185,11 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             routePoints = emptyList(),
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
+            onShowHistory = openHistory,
+            onShowOfflinePack = openOfflinePack,
+            onShowFareCalculator = openFareCalculator,
+            onShowSettings = openSettings,
+            packVersion = packVersion,
             bottomContent = { RouteProgressCard("Looking up the road route\u2026") },
         )
 
@@ -169,6 +199,11 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             routePoints = emptyList(),
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
+            onShowHistory = openHistory,
+            onShowOfflinePack = openOfflinePack,
+            onShowFareCalculator = openFareCalculator,
+            onShowSettings = openSettings,
+            packVersion = packVersion,
             bottomContent = { RouteProgressCard("Fetching road distance\u2026") },
         )
 
@@ -178,6 +213,11 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             routePoints = emptyList(),
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
+            onShowHistory = openHistory,
+            onShowOfflinePack = openOfflinePack,
+            onShowFareCalculator = openFareCalculator,
+            onShowSettings = openSettings,
+            packVersion = packVersion,
             bottomContent = {
                 RouteProgressCard(
                     "No internet. This trip is saved and the route will load " +
@@ -192,6 +232,11 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             routePoints = emptyList(),
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
+            onShowHistory = openHistory,
+            onShowOfflinePack = openOfflinePack,
+            onShowFareCalculator = openFareCalculator,
+            onShowSettings = openSettings,
+            packVersion = packVersion,
             bottomContent = {
                 RouteErrorCard(message = s.message, onRetry = viewModel::retryRoute)
             },
@@ -203,6 +248,11 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             routePoints = s.trip.routePoints,
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
+            onShowHistory = openHistory,
+            onShowOfflinePack = openOfflinePack,
+            onShowFareCalculator = openFareCalculator,
+            onShowSettings = openSettings,
+            packVersion = packVersion,
             busStops = s.trip.stopService?.stops.orEmpty(),
             busColorHex = s.trip.stopService?.colorHex ?: "#FFFFFF",
             bottomContent = {
@@ -226,6 +276,11 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             routePoints = s.trip.routePoints,
             onDestinationClick = viewModel::onDestinationSelected,
             onLocateMe = viewModel::locateMe,
+            onShowHistory = openHistory,
+            onShowOfflinePack = openOfflinePack,
+            onShowFareCalculator = openFareCalculator,
+            onShowSettings = openSettings,
+            packVersion = packVersion,
             busStops = s.trip.stopService?.stops.orEmpty(),
             busColorHex = s.trip.stopService?.colorHex ?: "#FFFFFF",
             bottomContent = {
@@ -236,10 +291,58 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
                 )
             },
         )
+        }
+
+        // Non-map states still get access to the two new tools.
+        if (state is UiState.NeedsPermission ||
+            state is UiState.Locating ||
+            state is UiState.GpsError
+        ) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(top = 16.dp, end = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SmallFloatingActionButton(
+                    onClick = openFareCalculator,
+                    containerColor = androidx.compose.ui.graphics.Color.White,
+                    contentColor = SagayColors.DeepOcean,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_payments),
+                        contentDescription = "Fare calculator",
+                    )
+                }
+                SmallFloatingActionButton(
+                    onClick = openSettings,
+                    containerColor = androidx.compose.ui.graphics.Color.White,
+                    contentColor = SagayColors.DeepOcean,
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = "Settings")
+                }
+            }
+        }
+
+        val overlayDuration = Motion.duration(Motion.PAGE_MS)
+        AnimatedVisibility(
+            visible = showFareCalculator,
+            enter = fadeIn(tween<Float>(overlayDuration)) +
+                slideInVertically(tween<IntOffset>(overlayDuration)) { it / 8 },
+            exit = fadeOut(tween<Float>(overlayDuration)) +
+                slideOutVertically(tween<IntOffset>(overlayDuration)) { it / 8 },
+            label = "fare-calculator-overlay",
+        ) {
+            FareCalculatorScreen(onDismiss = { showFareCalculator = false })
+        }
     }
 
     if (showOfflinePack) {
-        OfflinePackSheet(onDismiss = { showOfflinePack = false })
+        OfflinePackSheet(
+            onDismiss = { showOfflinePack = false },
+            onPackChanged = { packVersion += 1 },
+        )
     }
 
     if (showHistory) {
@@ -256,6 +359,13 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             onDismiss = { showTerminals = false },
         )
     }
+
+    if (showSettings) {
+        SettingsSheet(
+            viewModel = viewModel,
+            onDismiss = { showSettings = false },
+        )
+    }
 }
 
 /**
@@ -270,6 +380,7 @@ private fun terminalsInOrder(state: UiState): List<Terminal> {
         is UiState.WaitingForInternet -> state.data.terminals
         is UiState.RouteError -> state.data.terminals
         is UiState.ResultShown -> state.data.terminals
+        is UiState.Guidance -> state.data.terminals
         else -> emptyMap()
     }
     return terminals.values.sortedBy { it.id }
@@ -284,6 +395,7 @@ private fun routesInOrder(state: UiState): List<Route> {
         is UiState.WaitingForInternet -> state.data.routes
         is UiState.RouteError -> state.data.routes
         is UiState.ResultShown -> state.data.routes
+        is UiState.Guidance -> state.data.routes
         else -> emptyMap()
     }
     return routes.values.sortedBy { it.id }
@@ -300,6 +412,9 @@ private fun TripMap(
     busColorHex: String = "#FFFFFF",
     onShowHistory: () -> Unit = {},
     onShowOfflinePack: () -> Unit = {},
+    onShowFareCalculator: () -> Unit = {},
+    onShowSettings: () -> Unit = {},
+    packVersion: Int = 0,
     bottomContent: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -351,6 +466,15 @@ private fun TripMap(
         if (locateRequest > 0) {
             mapView.controller.setZoom(14.5)
             mapView.controller.setCenter(GeoPoint(position.lat, position.lng))
+        }
+    }
+
+    // A pack downloaded during this session must be used by the map that is
+    // already on screen, not only after the activity is recreated.
+    LaunchedEffect(packVersion) {
+        if (packVersion > 0) {
+            OfflineMapPack(context).activate(mapView)
+            mapView.invalidate()
         }
     }
 
@@ -423,6 +547,33 @@ private fun TripMap(
                 mv.invalidate()
             },
         )
+        FloatingActionButton(
+            onClick = onShowSettings,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(top = 16.dp, end = 256.dp),
+            containerColor = androidx.compose.ui.graphics.Color.White,
+            contentColor = SagayColors.DeepOcean,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        ) {
+            Icon(Icons.Default.Settings, contentDescription = "Settings and data")
+        }
+        FloatingActionButton(
+            onClick = onShowFareCalculator,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(top = 16.dp, end = 196.dp),
+            containerColor = androidx.compose.ui.graphics.Color.White,
+            contentColor = SagayColors.DeepOcean,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_payments),
+                contentDescription = "Fare calculator",
+            )
+        }
         FloatingActionButton(
             onClick = onShowOfflinePack,
             modifier = Modifier

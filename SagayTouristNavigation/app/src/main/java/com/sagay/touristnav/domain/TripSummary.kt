@@ -3,6 +3,7 @@ package com.sagay.touristnav.domain
 import com.sagay.touristnav.data.local.entities.TripRecordEntity
 import com.sagay.touristnav.domain.models.FareScope
 import com.sagay.touristnav.domain.models.TripEstimate
+import java.util.Locale
 
 object TripSummary {
 
@@ -21,13 +22,13 @@ object TripSummary {
         return buildList {
             add("Sagay Tourist Navigator")
             add("Destination: ${trip.destination.name}")
-            add("Distance: ${String.format("%.1f", trip.roadKm)} km")
+            add("Distance: ${String.format(Locale.US, "%.1f", trip.roadKm)} km")
             add("Service: ${trip.route?.serviceLabel ?: "not published"}")
             if (trip.changeAt != null) add("Change at: ${trip.changeAt}")
-            add("Fare per passenger: \u20B1${String.format("%.2f", amount)}")
+            add("Fare per passenger: \u20B1${String.format(Locale.US, "%.2f", amount)}")
             if (count > 1) {
                 add("Passengers: $count")
-                add("Group total: \u20B1${String.format("%.2f", total(amount, count))}")
+                add("Group total: \u20B1${String.format(Locale.US, "%.2f", total(amount, count))}")
             }
             add("Estimate only. Actual fares may vary.")
         }.joinToString("\n")
@@ -41,10 +42,10 @@ object TripSummary {
                 record.destinationName,
                 record.originZone,
                 record.vehicleLabel,
-                String.format("%.2f", record.fare),
+                String.format(Locale.US, "%.2f", record.fare),
                 record.discounted.toString(),
                 record.passengers.toString(),
-                String.format("%.2f", record.total),
+                String.format(Locale.US, "%.2f", record.total),
             ).joinToString(",") { escape(it) }).append('\n')
         }
     }
