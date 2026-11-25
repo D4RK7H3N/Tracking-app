@@ -62,11 +62,11 @@ public (`pk.`) and a secret downloads (`sk.`) token.
   reserved for the water routes, and every terminal matching the routes it boards.
 - `FareFormat` — published fares print as published: a whole peso amount stays
   whole and an amount with centavos keeps them.
-- `TripEstimator` — fare scoping per vehicle: the tricycle matrix fare and its
-  20% discount, an unverified bus fare, the island tricycle-to-port fare with an
-  unverified boat fare, and the distance estimate outside the matrix. It also
-  covers the Old Sagay to Sagay City corridor journey, its single fare, and a
-  stale access rule being ignored.
+- `TripEstimator` — fare scoping per vehicle: the tricycle and pink Reporm 2
+  matrix fares and their 20% discounts, the island tricycle-to-port fare with
+  an unverified boat fare, and the distance estimate outside the matrix. It
+  also covers the Old Sagay to Sagay City corridor journey, its single fare,
+  and a stale access rule being ignored.
 
 ## Route colours and vehicles
 
@@ -78,7 +78,7 @@ route colour together with the vehicle that carries it:
 | R-POPLACION | Red | Tricycle | none | Poblacion, Public Plaza, Public Market, Rizal |
 | R-BATO | Pink | Tricycle | none | Brgy. Bato |
 | R-VITO | Pink | Reporm 2 | 5 | Vito, Plaridel, Rafaela Barrera, Andres Bonifacio, Crossing Vito |
-| R-BULANON | Pink | Bus | 3 | Taba-ao, Bulanon Proper, Talusan |
+| R-BULANON | Pink | Reporm 2 | 3 | Taba-ao, Bulanon Proper, Talusan |
 | R-OLD-SAGAY | Yellow | Tricycle | 5 | Sagay City Bus Terminal (Poblacion) - Old Sagay Elementary School - Margaha Beach - Museo sang Bata sa Negros - Old Sagay Port |
 | R-WATER-OLD-SAGAY | White | Boat | none | Carbin Reef, Suyac, Panal and Macahulom from Old Sagay Port |
 | R-WATER-VITO | White | Boat | none | Molocaboc Island from the Vito Fish Port |
@@ -89,15 +89,15 @@ The three terminals board these services:
 | --- | --- | --- | --- |
 | T1 Sagay Public Market (Poblacion) | Red | Tricycle | Poblacion, Public Plaza, Public Market, Rizal |
 | T2 Vito (Government Center route) | Pink | Reporm 2, Tricycle, Boat | Vito, Bato, Vito Fish Port (Molocaboc boats), National Highway |
-| T3 Old Sagay Port | Yellow | Tricycle, Bus, Boat | Old Sagay to Sagay City, Sagay City to Old Sagay, Taba-ao, Bulanon, Himoga-an Baybay, Carbin Reef and Suyac boats |
+| T3 Old Sagay Port | Yellow | Tricycle, Reporm 2, Boat | Old Sagay to Sagay City, Sagay City to Old Sagay, Taba-ao, Bulanon, Himoga-an Baybay, Carbin Reef and Suyac boats |
 
 **White is reserved for the water routes.** The colour belongs to the
 *route*, because it is the colour of the vehicle a tourist has to ask for, and
 one terminal can board several colours.
 
 The vehicle a route serves is **data, not code**: `seed.json` ->
-`routes[].vehicle` is a vehicle id (`bus`, `tricycle`, `reporm2`,
-`boat`). Change one value and restart the app. The colour chip, the icon in
+`routes[].vehicle` is a vehicle id (`tricycle`, `reporm2`, `boat`).
+Change one value and restart the app. The colour chip, the icon in
 the destination list and the badge on the trip card all follow the route
 colour, and the glyph switches to a dark ink on light routes so the white and
 the yellow services stay readable.
@@ -124,7 +124,7 @@ for `ic_my_location.xml`.
 .\tools\extract-material-icons.ps1 `
     -Aar <path-to-material-icons-extended.aar> `
     -OutDir app\src\main\res\drawable `
-    -Icons DirectionsBus,ElectricRickshaw,DirectionsBoat,Payments,Schedule,Route
+    -Icons ElectricRickshaw,DirectionsBoat,Payments,Schedule,Route
 ```
 
 Material Icons are Apache-2.0 licensed and every generated drawable carries
@@ -172,12 +172,11 @@ prices **motorized tricycles** only:
 | Service | What the card shows |
 | --- | --- |
 | Tricycle / Reporm 2 | The matrix fare, or the distance estimate when the pair is not in the matrix |
-| Bus | **Fare not verified** — road distance and time are still shown |
 | Island / reef | The **tricycle fare to the port**, plus **Boat fare not verified** |
 | No known route | **Fare not verified** — local public-transport details need confirmation |
 
-A verified land fare is never combined with an unpublished bus or boat fare
-into a single total.
+A verified land fare is never combined with an unpublished boat fare into a
+single total.
 
 The 20% toggle is offered only for an official matrix fare. The distance
 estimate keeps its single value, because no discounted estimate is
@@ -255,7 +254,7 @@ are stored in travel order.
 
 1. **Terminal coordinates, colours and vehicles** — `assets/seed.json` ->
    `terminals[]` and `routes[]`. The route colours (red tricycle, pink
-   Reporm 2 / tricycle / bus, yellow tricycle, white boat) were supplied by the
+   Reporm 2 / tricycle, yellow tricycle, white boat) were supplied by the
    app owner; the coordinates were researched from public sources. Verify all
    of it with the Sagay City Tourism Office / LTFRB-franchised operators.
 2. **Destinations** — `assets/seed.json` -> `destinations[]`. 38 entries
@@ -293,9 +292,9 @@ app/src/main/java/com/sagay/touristnav/
   domain/     FareCalculator, TripEstimator, Haversine,
               FareZoneDetector / FareMatrixLookup, models
               (Terminal, VehicleType, Destination, FareRule, TripEstimate,
-              BusRoute, RouteStop)
+              Route, RouteStop)
   data/local/ AppDatabase, TerminalDao, DestinationDao, FareRuleDao,
-              FareMatrixDao, FareOriginDao, BusRouteDao, TripStateDao,
+              FareMatrixDao, FareOriginDao, RouteDao, TripStateDao,
               entities, SeedLoader, SeedParser
  data/remote/DirectionsApi (Mapbox Directions v5, driving)
  data/repo/  TripRepository
@@ -308,8 +307,8 @@ tools/       extract-material-icons.ps1 (Material icon -> vector drawable)
 - **Onboarding** — three-page first-run tour (search, colour-coded vehicle,
   official matrix fare), persisted in `OnboardingPrefs`.
 - **Fare calculator** — offline tool: choose an origin zone and a route, see
-  the regular and 20%-discounted official fare plus a group total. Bus, boat
-  and unknown routes are explicitly "not verified".
+  the regular and 20%-discounted official fare plus a group total. Boat and
+  unknown routes are explicitly "not verified".
 - **Settings & data** — OS/in-app reduce-motion control, clear trip history
   with confirmation, and the data-verification caveat.
 - The palette is now Deep Ocean / Coral / Sunrise Gold / Warm Mist. The

@@ -7,9 +7,9 @@ data class TripEstimate(
     val durationMinutes: Double,
     /**
      * The fare of this trip, scoped to the vehicle that carries it: a
-     * tricycle ride is priced from the published matrix, a bus ride is not
-     * priced at all, and an island trip prices only the tricycle leg to the
-     * port.
+     * tricycle or Reporm 2 ride is priced from the published matrix, an island
+     * trip prices only the tricycle leg to the port, and a route with no known
+     * service is not priced at all.
      */
     val fare: FareScope,
     val routePoints: List<RoutePoint>,

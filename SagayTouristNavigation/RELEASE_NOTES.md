@@ -18,8 +18,8 @@ feature list.
 ## v1.0.0 (versionCode 1) — 2026-11-11 (historical)
 
 First branded build of the native Android app: a calm-teal tourist navigator for
-Sagay City that routes visitors from their location to the correct jeepney
-terminal (and boat port for islands), with distance, duration, and fare estimates.
+Sagay City that routes visitors from their location to the correct terminal
+(and boat port for islands), with distance, duration, and fare estimates.
 
 - **Package:** `com.sagay.touristnav`
 - **Requires:** Android 9+ (minSdk 28), targets Android 15 (targetSdk 35)

@@ -46,7 +46,21 @@ class Route {
   final String vehicle;
   final List<RouteStop> stops;
 
-  String get serviceLabel => '$colorName $vehicle';
+  /// Human-readable vehicle name for labels and saved trip history.
+  String get vehicleLabel {
+    switch (vehicle.trim().toLowerCase()) {
+      case 'reporm2':
+        return 'Reporm 2';
+      case 'tricycle':
+        return 'Tricycle';
+      case 'boat':
+        return 'Boat';
+      default:
+        return vehicle;
+    }
+  }
+
+  String get serviceLabel => '$colorName $vehicleLabel';
 
   Color get uiColor {
     var value = colorHex.replaceFirst('#', '');

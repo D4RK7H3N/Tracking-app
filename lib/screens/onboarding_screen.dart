@@ -31,10 +31,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           'the road distance and the terminal that serves it.',
     ),
     _OnboardingPage(
-      icon: Icons.directions_bus,
+      icon: Icons.two_wheeler,
       title: 'Ask for the colour-coded vehicle',
       subtitle: 'Each route has its own colour and vehicle. Match the badge '
-          'in the app with the tricycle, Reporm 2, bus or boat at the terminal.',
+          'in the app with the tricycle, Reporm 2 or boat at the terminal.',
     ),
     _OnboardingPage(
       icon: Icons.payments_outlined,
@@ -266,8 +266,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               const _Tip('Group total for your whole party'),
               const SizedBox(height: 12),
               Text(
-                'Boat and bus fares are not published. They are shown as '
-                '"Not verified" instead of a made-up amount.',
+                'Boat fares are not published. The boat leg is shown as '
+                '"Not verified" instead of a made-up trip total.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Palette.deepOcean,
                     ),

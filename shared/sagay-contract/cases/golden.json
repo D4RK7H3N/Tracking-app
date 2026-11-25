@@ -38,6 +38,24 @@
       "expectedOfficial": true
     },
     {
+      "id": "bulanon-reporm2-regular",
+      "originZone": "CITY_PROPER",
+      "destinationZone": "BRGY. PROPER (BULANON)",
+      "roadKm": 20,
+      "discounted": false,
+      "expectedAmount": 30,
+      "expectedOfficial": true
+    },
+    {
+      "id": "bulanon-reporm2-discounted",
+      "originZone": "CITY_PROPER",
+      "destinationZone": "BRGY. PROPER (BULANON)",
+      "roadKm": 20,
+      "discounted": true,
+      "expectedAmount": 24,
+      "expectedOfficial": true
+    },
+    {
       "id": "vito-port-regular",
       "originZone": "CROSSING_VITO",
       "destinationZone": "VITO PORT",

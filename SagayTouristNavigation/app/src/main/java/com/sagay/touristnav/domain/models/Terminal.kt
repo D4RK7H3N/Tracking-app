@@ -11,7 +11,7 @@ data class Terminal(
     /**
      * Vehicles boarding at this terminal, in the order they should be shown.
      * The colour of the terminal is the colour of the route, so a terminal
-     * with a single vehicle reads as "the red tricycle" or "the yellow bus".
+     * with a single vehicle reads as "the red tricycle" or "the pink Reporm 2".
      */
     val vehicles: List<VehicleType> = emptyList(),
 ) {

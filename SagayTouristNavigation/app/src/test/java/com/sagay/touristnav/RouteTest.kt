@@ -53,6 +53,14 @@ class RouteTest {
     }
 
     @Test
+    fun `the bulanon service is the pink reporm 2`() {
+        val bulanon = file.routes.first { it.id == "R-BULANON" }
+        assertEquals(VehicleType.REPORM_2.id, bulanon.vehicle)
+        assertEquals("Pink", bulanon.colorName)
+        assertEquals("#E91E63", bulanon.colorHex)
+    }
+
+    @Test
     fun `the old sagay route is yellow and the vito and bulanon routes are pink`() {
         val byId = file.routes.associateBy { it.id }
         assertEquals("Yellow", byId.getValue("R-OLD-SAGAY").colorName)
@@ -122,7 +130,7 @@ class RouteTest {
     }
 
     @Test
-    fun `the reporm 2 is its own vehicle, not a tricycle or a bus`() {
+    fun `the reporm 2 is its own vehicle, not a tricycle`() {
         val reporm = file.routes.filter { it.vehicle == VehicleType.REPORM_2.id }
         assertTrue(reporm.isNotEmpty())
         reporm.forEach { route ->
@@ -173,10 +181,10 @@ class RouteTest {
             terminalId = "T3",
             colorHex = "#F9A825",
             colorName = "Yellow",
-            vehicle = VehicleType.BUS,
+            vehicle = VehicleType.REPORM_2,
             stops = stops,
         )
         assertEquals(listOf("First", "Second"), route.stops.map { it.name })
-        assertEquals("Yellow Bus", route.serviceLabel)
+        assertEquals("Yellow Reporm 2", route.serviceLabel)
     }
 }

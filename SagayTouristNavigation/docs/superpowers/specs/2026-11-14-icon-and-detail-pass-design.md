@@ -7,7 +7,7 @@ Status: approved by the user, pending implementation
 
 Make the app tell a tourist, at a glance, **which vehicle to board, what colour
 it is, what the fare is, and how long the trip takes** — using the icon set
-presented in the lecture (Bus, Tricycle, Reporm 2 Tricycle, Red, Fare,
+presented in the lecture (Tricycle, Reporm 2 Tricycle, Red, Fare,
 Estimated Time).
 
 ## Starting point (measured, not assumed)
@@ -21,7 +21,7 @@ Estimated Time).
   and a working 20% student/senior/PWD discount toggle. The stale hardcoded
   fare line and the hidden `fareBasis` are fixed as part of that work.
 - The app has **no vehicle concept**: nothing tells a tourist to ask for the
-  red tricycle rather than the bus.
+  red tricycle rather than the pink Reporm 2.
 - `material-icons-extended` is not a dependency. Only `material-icons-core` is
   on the classpath, and `isMinifyEnabled = false`, so adding the extended
   artifact would ship all 2 084 icons in the APK.
@@ -43,7 +43,7 @@ The extractor reproduces Material's genuine path data, so the icons are
 pixel-accurate. Material Icons are Apache-2.0; each generated drawable carries
 an attribution comment.
 
-Icons shipped: `directions_bus`, `electric_rickshaw`, `directions_boat`,
+Icons shipped: `electric_rickshaw`, `directions_boat`,
 `payments`, `schedule`, `route`, plus `palette`, `local_taxi`, `pedal_bike`,
 `two_wheeler`, `directions_bike`, `airport_shuttle`, `access_time`, `wallet`,
 `directions_transit`, `groups`.
@@ -57,7 +57,7 @@ tinted at runtime to the serving terminal's route colour, so the red, yellow
 and white tricycles come from one drawable instead of three near-identical
 files. Contrast is preserved by rendering the glyph inside a tinted circular
 badge with a hairline border when the route colour is too light to read on a
-white card (white bus, yellow tricycle).
+white card (white boat, yellow tricycle).
 
 ## Data model
 
@@ -65,7 +65,6 @@ white card (white bus, yellow tricycle).
 
 | id | display name | icon |
 |---|---|---|
-| `bus` | Bus | `ic_directions_bus` |
 | `tricycle` | Tricycle | `ic_electric_rickshaw` |
 | `reporm2` | Reporm 2 Tricycle | `ic_tricycle_reporm2` |
 | `boat` | Boat | `ic_directions_boat` |
@@ -78,7 +77,7 @@ white card (white bus, yellow tricycle).
 |---|---|---|---|---|
 | T1 | Sagay Public Market Terminal (Poblacion) | **Red** `#D32F2F` | Tricycle | |
 | T2 | Vito Terminal (Government Center route) | **Yellow** `#F9A825` | Reporm 2 Tricycle | Vito Fish Port (Molocaboc boats) |
-| T3 | Old Sagay Port Terminal | **White** `#FFFFFF` | Bus, Boat | route *Old Sagay to Sagay City* / *Sagay City to Old Sagay*; Carbin Reef and Suyac boats |
+| T3 | Old Sagay Port Terminal | **White** `#FFFFFF` | Reporm 2, Tricycle, Boat | route *Old Sagay to Sagay City* / *Sagay City to Old Sagay*; the pink Reporm 2 to Bulanon; Carbin Reef and Suyac boats |
 
 The vehicles per terminal live in `seed.json` as one JSON array per terminal,
 so a correction is a one-line edit and an app restart.

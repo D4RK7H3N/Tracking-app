@@ -33,7 +33,7 @@ class FareService {
 
   /// Prices the trip and explains what the amount covers, scoped to the
   /// vehicle that carries it. The fare math is identical to [estimate]; only
-  /// the interpretation of the amount changes (bus/unverified show no fare,
+  /// the interpretation of the amount changes (unknown vehicles show no fare,
   /// island fares price the tricycle leg to the port).
   FareQuote quote({
     required AppData data,

@@ -29,6 +29,7 @@ class VehicleTypeTest {
     @Test
     fun `an unknown vehicle id resolves to nothing`() {
         assertNull(VehicleType.fromId("jeepney"))
+        assertNull(VehicleType.fromId("bus"))
         assertNull(VehicleType.fromId(""))
     }
 
@@ -57,7 +58,7 @@ class VehicleTypeTest {
             terminals.getValue("T2").vehicles,
         )
         assertEquals(
-            listOf("tricycle", "bus", "boat"),
+            listOf("tricycle", "reporm2", "boat"),
             terminals.getValue("T3").vehicles,
         )
         assertEquals("Red", terminals.getValue("T1").colorName)
@@ -81,8 +82,12 @@ class VehicleTypeTest {
             terminal("T2", "Pink", listOf(VehicleType.REPORM_2, VehicleType.TRICYCLE)).serviceLabel,
         )
         assertEquals(
-            "Tricycle + Bus + Boat",
-            terminal("T3", "Yellow", listOf(VehicleType.TRICYCLE, VehicleType.BUS, VehicleType.BOAT)).serviceLabel,
+            "Tricycle + Reporm 2 + Boat",
+            terminal(
+                "T3",
+                "Yellow",
+                listOf(VehicleType.TRICYCLE, VehicleType.REPORM_2, VehicleType.BOAT),
+            ).serviceLabel,
         )
     }
 

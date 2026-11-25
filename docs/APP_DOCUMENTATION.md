@@ -49,9 +49,9 @@ Result preserved across rotation (landscape):
      <terminal>") — the road leg ends at the port, not offshore.
    - A **distance warning** appears if the road distance looks implausible
      compared to straight-line (see §7).
-   - The fare describes the vehicle that carries the trip: a tricycle fare,
-     an unverified bus fare, or the tricycle-to-port fare plus an unverified
-     boat fare (see §8).
+   - The fare describes the vehicle that carries the trip: a tricycle or
+     Reporm 2 fare, or the tricycle-to-port fare plus an unverified boat fare
+     (see §8).
 6. **Navigate the map.** Use the **+ / −** zoom buttons (left edge) and the teal
    **Locate Me** button (top-right) to recenter on your position.
 7. **Pick another.** "Select new destination" returns to the map/list.
@@ -183,7 +183,7 @@ fare matrix and the access rules are upserted the same way.
 **Migrations.** `MIGRATION_2_3` adds `fare_rule.maxFare` via
 `ALTER TABLE … ADD COLUMN`, preserving existing rows (including saved trips).
 `MIGRATION_3_4` adds the fare matrix and its origins, `MIGRATION_4_5` adds the
-terminal's `vehicles` column, `MIGRATION_5_6` adds the bus routes and their
+terminal's `vehicles` column, `MIGRATION_5_6` adds the seeded land routes and their
 stops, `MIGRATION_6_7` generalises those into routes and route stops, and
 `MIGRATION_7_8` adds the owner-supplied `route_access` table. `MIGRATION_8_9`
 creates the **trip history (`trip_record`) and favourites (`favorite`)** tables.
@@ -252,11 +252,10 @@ is applied to tricycle and Reporm 2 rides and to nothing else.
 | Service | What the card shows |
 | --- | --- |
 | Tricycle / Reporm 2 | The matrix fare, or the distance estimate when the pair is not in the matrix |
-| Bus | **Fare not verified** — road distance and time are still shown |
 | Island / reef | The **tricycle fare to the port**, plus **Boat fare not verified** |
 | No known route | **Fare not verified** — local public-transport details need confirmation |
 
-A verified land fare is never combined with an unpublished bus or boat fare
+A verified land fare is never combined with an unpublished boat fare
 into a single total.
 
 ### The Old Sagay to Sagay City corridor
@@ -378,7 +377,7 @@ JVM unit tests (`:app:testDebugUnitTest`):
 | `SeedParserTest` | 3 terminals / 38 destinations (21 schools), terminal-id resolution, 8 boat flags, fare values + cap, `#RRGGBB` colours, the corridor matrix row and the access rule. |
 | `RouteTest` | Route colours per route, the yellow corridor being a tricycle, white reserved for the water routes, and each terminal matching its routes. |
 | `FareFormatTest` | Published fares print as published: whole pesos stay whole, centavos are kept. |
-| `TripEstimatorTest` | Fare scoping per vehicle: tricycle matrix and discount, bus unverified, island tricycle-to-port plus an unverified boat fare, the Old Sagay to Sagay City corridor journey and its single fare, and a stale access rule being ignored. |
+| `TripEstimatorTest` | Fare scoping per vehicle: tricycle/Reporm 2 matrix and discount, unknown vehicle unverified, island tricycle-to-port plus an unverified boat fare, the Old Sagay to Sagay City corridor journey and its single fare, and a stale access rule being ignored. |
 
 ---
 

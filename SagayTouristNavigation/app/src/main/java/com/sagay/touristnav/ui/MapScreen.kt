@@ -253,8 +253,8 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             onShowFareCalculator = openFareCalculator,
             onShowSettings = openSettings,
             packVersion = packVersion,
-            busStops = s.trip.stopService?.stops.orEmpty(),
-            busColorHex = s.trip.stopService?.colorHex ?: "#FFFFFF",
+            routeStops = s.trip.stopService?.stops.orEmpty(),
+            routeColorHex = s.trip.stopService?.colorHex ?: "#FFFFFF",
             bottomContent = {
                 TripDetailsCard(
                     trip = s.trip,
@@ -281,8 +281,8 @@ fun MapScreen(viewModel: TripViewModel = hiltViewModel()) {
             onShowFareCalculator = openFareCalculator,
             onShowSettings = openSettings,
             packVersion = packVersion,
-            busStops = s.trip.stopService?.stops.orEmpty(),
-            busColorHex = s.trip.stopService?.colorHex ?: "#FFFFFF",
+            routeStops = s.trip.stopService?.stops.orEmpty(),
+            routeColorHex = s.trip.stopService?.colorHex ?: "#FFFFFF",
             bottomContent = {
                 GuidanceCard(
                     snapshot = s.snapshot,
@@ -408,8 +408,8 @@ private fun TripMap(
     routePoints: List<RoutePoint>,
     onDestinationClick: (Destination) -> Unit,
     onLocateMe: () -> Unit,
-    busStops: List<RouteStop> = emptyList(),
-    busColorHex: String = "#FFFFFF",
+    routeStops: List<RouteStop> = emptyList(),
+    routeColorHex: String = "#FFFFFF",
     onShowHistory: () -> Unit = {},
     onShowOfflinePack: () -> Unit = {},
     onShowFareCalculator: () -> Unit = {},
@@ -514,13 +514,13 @@ private fun TripMap(
                 if (routePoints.size >= 2) {
                     mv.overlays.add(routePolyline(routePoints))
                 }
-                busStops.forEach { stop ->
+                routeStops.forEach { stop ->
                     mv.overlays.add(
                         stopMarker(
                             mapView = mv,
                             context = context,
                             stop = stop,
-                            color = parseHexColor(busColorHex),
+                            color = parseHexColor(routeColorHex),
                         ),
                     )
                 }
@@ -530,7 +530,7 @@ private fun TripMap(
                         add(GeoPoint(position.lat, position.lng))
                         selected?.let { add(GeoPoint(it.lat, it.lng)) }
                         routePoints.forEach { add(GeoPoint(it.lat, it.lng)) }
-                        busStops.forEach { add(GeoPoint(it.lat, it.lng)) }
+                        routeStops.forEach { add(GeoPoint(it.lat, it.lng)) }
                     }
                     // Manual camera fit: zoomToBoundingBox can hang forever in
                     // Projection.getCloserPixel on small/degenerate boxes.
@@ -785,7 +785,7 @@ private fun destinationMarker(
     }
 
 /**
- * A bus stop marker: the route colour with the stop number inside, so the
+ * A route stop marker: the route colour with the stop number inside, so the
  * order of the stops is readable straight from the map.
  */
 private fun stopMarker(
