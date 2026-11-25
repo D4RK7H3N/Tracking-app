@@ -155,8 +155,8 @@ rule fires:
   destination's own fare zone.
 
 The rest of the fare scoping is unchanged: the published matrix applies to
-tricycle and Reporm 2 rides, a bus ride carries no fare, and an island trip
-prices only the tricycle leg to the port.
+tricycle and Reporm 2 rides, a route with no known vehicle carries no verified
+fare, and an island trip prices only the tricycle leg to the port.
 
 ## UI
 
@@ -209,8 +209,8 @@ decimals (₱20, ₱16) and amounts with centavos print with them (₱13.60, not
 - Passenger in Old Sagay going to a destination the Yellow route serves
   (Old Sagay Elementary School, Margaha Beach): one service, no change point.
 - Passenger in Old Sagay going to a Vito or Bulanon destination: no access rule
-  fires. The Old Sagay Port Terminal boards the Bulanon bus directly, so no
-  change is invented.
+  fires. The Old Sagay Port Terminal serves the Bulanon Reporm 2 route directly,
+  so no change is invented.
 - Access rule whose via route id is not in the seed: the rule is ignored and
   the journey falls back to the destination's route alone.
 - Access rule with a missing matrix row for its `fareZone`: the journey still
@@ -233,8 +233,8 @@ decimals (₱20, ₱16) and amounts with centavos print with them (₱13.60, not
    picks up the new table.
 4. Install on the connected Vivo phone and check, standing in Old Sagay: the
    Yellow then Red journey to Sagay National High School, the ₱20 fare, the
-   change point, the discounted ₱16, and a bus destination showing "Not
-   verified".
+   change point, the discounted ₱16, and a destination with no known vehicle
+   showing "Not verified".
 5. Check an island destination shows the tricycle-to-port fare and "Boat fare
    not verified", and that a distance estimate shows no discount toggle.
 
@@ -245,4 +245,4 @@ decimals (₱20, ₱16) and amounts with centavos print with them (₱13.60, not
 - New routes, terminals or stops.
 - Changing the City Proper fare table or any other origin table.
 - Discounting the distance estimate.
-- Totalling a land fare with an unpublished bus or boat fare.
+- Totalling a land fare with an unpublished boat fare.

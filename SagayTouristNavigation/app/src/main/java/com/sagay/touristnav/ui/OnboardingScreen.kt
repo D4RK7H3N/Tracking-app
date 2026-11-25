@@ -63,7 +63,7 @@ private enum class TourPage(val title: String, val body: String) {
     COLOUR(
         "Ask for the colour",
         "At the terminal, ask for the colour-coded vehicle: red and yellow " +
-            "tricycles, pink buses and white boats. Each route has its own colour.",
+            "tricycles, pink Reporm 2s and white boats. Each route has its own colour.",
     ),
     FARE(
         "Know the fare",
@@ -282,7 +282,7 @@ private fun OnboardingPage(page: Int) {
                 // data assigns to the real routes, never a redefinition of them.
                 RouteBadge(VehicleType.TRICYCLE, "#D32F2F", size = 36.dp)
                 RouteBadge(VehicleType.TRICYCLE, "#F9A825", size = 36.dp)
-                RouteBadge(VehicleType.BUS, "#E91E63", size = 36.dp)
+                RouteBadge(VehicleType.REPORM_2, "#E91E63", size = 36.dp)
                 RouteBadge(VehicleType.BOAT, "#FFFFFF", size = 36.dp)
             }
             else -> FilterChip(

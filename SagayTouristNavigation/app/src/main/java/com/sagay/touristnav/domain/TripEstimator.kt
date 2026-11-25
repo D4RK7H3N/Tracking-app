@@ -121,8 +121,7 @@ class TripEstimator @Inject constructor() {
      * The fare of the service being described.
      *
      * The published matrix prices motorized tricycles, so it is only applied
-     * to tricycle and Reporm 2 rides. A bus ride keeps its road distance and
-     * time but carries no fare, and an island trip prices only the tricycle
+     * to tricycle and Reporm 2 rides. An island trip prices only the tricycle
      * leg to the port: the boat fare is not published and is never folded
      * into the land amount.
      */
@@ -136,12 +135,6 @@ class TripEstimator @Inject constructor() {
         destinationZone: String?,
         discounted: Boolean,
     ): FareScope {
-        // The published matrix prices motorized tricycles only. A bus keeps
-        // its road distance and time, but its fare is not published and must
-        // never be silently priced from the tricycle matrix.
-        if (!requiresBoat && vehicle == VehicleType.BUS) {
-            return FareScope.Bus
-        }
         // An island trip is a tricycle ride to the port plus a boat leg, so
         // the land leg is priced like any other tricycle ride.
         val landVehicle = if (requiresBoat) {

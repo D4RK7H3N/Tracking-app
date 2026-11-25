@@ -10,7 +10,7 @@ object TripSummary {
     fun unitAmount(scope: FareScope): Double = when (scope) {
         is FareScope.MotorizedTricycle -> scope.amount
         is FareScope.Island -> scope.tricycleToPort.amount
-        FareScope.Bus, FareScope.Unverified -> 0.0
+        FareScope.Unverified -> 0.0
     }
 
     fun total(amount: Double, passengers: Int): Double =

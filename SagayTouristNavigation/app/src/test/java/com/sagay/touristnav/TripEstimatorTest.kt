@@ -18,8 +18,8 @@ import org.junit.Test
 /**
  * The fare must describe the vehicle that actually carries the passenger.
  *
- * The published matrix prices motorized tricycles, so a bus ride is not
- * priced from it, and an island trip prices only the tricycle leg to the
+ * The published matrix prices motorized tricycles, so it covers the Reporm 2
+ * service as well, and an island trip prices only the tricycle leg to the
  * port: the boat fare is not published and is never folded into the land
  * amount.
  */
@@ -66,7 +66,7 @@ class TripEstimatorTest {
         colorHex = "#F9A825",
         colorName = "Yellow",
         serviceArea = "Old Sagay",
-        vehicles = listOf(VehicleType.TRICYCLE, VehicleType.BUS, VehicleType.BOAT),
+        vehicles = listOf(VehicleType.TRICYCLE, VehicleType.REPORM_2, VehicleType.BOAT),
     )
 
     private val road = RouteSummary(roadKm = 6.6, durationMinutes = 18.0, points = emptyList())
@@ -173,20 +173,22 @@ class TripEstimatorTest {
     }
 
     @Test
-    fun `a bus ride has no published fare`() {
+    fun `a reporm 2 ride takes the official matrix fare`() {
         val trip = estimate(
             destination = destination("R-BULANON", fareZone = "BRGY. BULANON"),
-            route = route("R-BULANON", VehicleType.BUS),
+            route = route("R-BULANON", VehicleType.REPORM_2),
         )
-        assertEquals(FareScope.Bus, trip.fare)
-        assertTrue(!trip.fare.canDiscount)
+        val fare = trip.fare as FareScope.MotorizedTricycle
+        assertEquals(30.0, fare.amount, 0.001)
+        assertTrue(fare.isOfficial)
+        assertTrue(fare.basis.contains("City Proper (Poblacion)"))
     }
 
     @Test
-    fun `a bus ride keeps its road distance and time`() {
+    fun `a reporm 2 ride keeps its road distance and time`() {
         val trip = estimate(
             destination = destination("R-BULANON", fareZone = "BRGY. BULANON"),
-            route = route("R-BULANON", VehicleType.BUS),
+            route = route("R-BULANON", VehicleType.REPORM_2),
         )
         assertEquals(6.6, trip.roadKm, 0.001)
         assertEquals(18.0, trip.durationMinutes, 0.001)
@@ -228,14 +230,16 @@ class TripEstimatorTest {
     }
 
     @Test
-    fun `the discount is not offered for a bus fare`() {
+    fun `the 20 percent discount applies to a reporm 2 fare`() {
         val trip = estimate(
             destination = destination("R-BULANON", fareZone = "BRGY. BULANON"),
-            route = route("R-BULANON", VehicleType.BUS),
+            route = route("R-BULANON", VehicleType.REPORM_2),
             discounted = true,
         )
-        assertEquals(FareScope.Bus, trip.fare)
-        assertTrue(!trip.fare.canDiscount)
+        val fare = trip.fare as FareScope.MotorizedTricycle
+        assertEquals(24.0, fare.amount, 0.001)
+        assertTrue(trip.fareDiscounted)
+        assertTrue(fare.canDiscount)
     }
 
     @Test
@@ -252,11 +256,11 @@ class TripEstimatorTest {
         )
         assertTrue(!estimateTrip.fare.canDiscount)
 
-        val busTrip = estimate(
+        val repormTrip = estimate(
             destination = destination("R-BULANON", fareZone = "BRGY. BULANON"),
-            route = route("R-BULANON", VehicleType.BUS),
+            route = route("R-BULANON", VehicleType.REPORM_2),
         )
-        assertTrue(!busTrip.fare.canDiscount)
+        assertTrue(repormTrip.fare.canDiscount)
     }
 
     @Test

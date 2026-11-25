@@ -4,10 +4,9 @@ package com.sagay.touristnav.domain.models
  * What the fare of a trip means, scoped to the vehicle that carries it.
  *
  * The city publishes fares for motorized tricycles only, so the published
- * matrix is applied to tricycle and Reporm 2 rides. A bus ride has no
- * published fare, and an island trip is a tricycle ride to the departure
- * port plus a boat leg whose fare is not published. The two legs are never
- * added up into a single total.
+ * matrix is applied to tricycle and Reporm 2 rides. An island trip is a
+ * tricycle ride to the departure port plus a boat leg whose fare is not
+ * published. The two legs are never added up into a single total.
  */
 sealed interface FareScope {
 
@@ -23,7 +22,7 @@ sealed interface FareScope {
         get() = when (this) {
             is MotorizedTricycle -> isOfficial
             is Island -> tricycleToPort.isOfficial
-            Bus, Unverified -> false
+            Unverified -> false
         }
 
     /**
@@ -38,9 +37,6 @@ sealed interface FareScope {
         /** Explains which rule produced [amount]. */
         val basis: String,
     ) : FareScope
-
-    /** A bus ride: the city publishes no bus fare. */
-    data object Bus : FareScope
 
     /**
      * An island trip: a tricycle ride to the departure port, plus a boat leg

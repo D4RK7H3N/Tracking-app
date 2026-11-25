@@ -8,9 +8,6 @@ package com.sagay.touristnav.domain.models
  * changing an [id] would orphan the stored data.
  */
 enum class VehicleType(val id: String, val displayName: String) {
-    /** Jeepney / bus. */
-    BUS("bus", "Bus"),
-
     /**
      * Motorcycle with a sidecar: the common tricycle. It runs the Poblacion
      * rides and the yellow Sagay City - Old Sagay corridor.
@@ -19,8 +16,8 @@ enum class VehicleType(val id: String, val displayName: String) {
 
     /**
      * The Reporm 2, the motorized tricycle body used across Negros
-     * Occidental: a motorcycle with an open passenger sidecar. It is neither
-     * the closed tricycle nor a bus, so it is announced on its own.
+     * Occidental: a motorcycle with an open passenger sidecar. It is not the
+     * closed tricycle, so it is announced on its own.
      */
     REPORM_2("reporm2", "Reporm 2"),
 

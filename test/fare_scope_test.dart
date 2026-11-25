@@ -37,15 +37,15 @@ void main() {
     expect(quote.estimate.discounted, isTrue);
   });
 
-  test('bus routes show no verified fare and no discount', () {
-    final quote = quoteFor('D10'); // Bulanon: R-BULANON is a bus route
-    expect(data.routeForDestination(find('D10'))?.vehicle, 'bus');
-    expect(quote.scope, isA<BusFare>());
-    expect(quote.scope.canDiscount, isFalse);
-    expect(quote.scope.headline((value) => '₱$value'), 'Not verified');
-    expect(quote.scope.basis, contains('Bus fare not verified'));
-    // No unpublished discounted price leaks into the history estimate.
-    expect(quote.estimate.discounted, isFalse);
+  test('reporm2 routes get the official matrix fare with the 20% discount', () {
+    final quote = quoteFor('D10'); // Bulanon: R-BULANON is a Reporm 2 route
+    expect(data.routeForDestination(find('D10'))?.vehicle, 'reporm2');
+    expect(quote.scope, isA<MotorizedTricycleFare>());
+    expect(quote.scope.isOfficial, isTrue);
+    expect(quote.scope.canDiscount, isTrue);
+    expect(quote.scope.amount, 24); // CITY_PROPER -> BRGY. PROPER (BULANON)
+    expect(quote.scope.label, 'official matrix fare');
+    expect(quote.estimate.discounted, isTrue);
   });
 
   test('island trips price only the tricycle leg to the port', () {

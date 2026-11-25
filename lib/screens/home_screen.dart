@@ -407,7 +407,7 @@ class _MapWithSheetState extends State<_MapWithSheet>
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       children: [
                         for (final label in const [
-                          'All', 'Red', 'Yellow', 'Pink', 'Bus', 'Boat',
+                          'All', 'Red', 'Yellow', 'Pink', 'Boat',
                         ])
                           Padding(
                             padding: const EdgeInsets.only(right: 6),
@@ -484,7 +484,6 @@ class _MapWithSheetState extends State<_MapWithSheet>
           destination.category.toLowerCase().contains(query);
       final route = widget.data.routeById(destination.routeId);
       final matchesRoute = switch (_routeFilter) {
-        'Bus' => route?.vehicle.toLowerCase() == 'bus',
         'Boat' => destination.boat || route?.vehicle.toLowerCase() == 'boat',
         'All' => true,
         _ => route?.colorName.toLowerCase() == _routeFilter.toLowerCase(),

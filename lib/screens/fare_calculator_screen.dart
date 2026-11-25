@@ -83,7 +83,7 @@ class _FareCalculatorScreenState extends State<FareCalculatorScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Estimate only. Unpublished bus and boat fares are never '
+                  'Estimate only. Unpublished boat fares are never '
                   'turned into a number.',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodySmall?.copyWith(

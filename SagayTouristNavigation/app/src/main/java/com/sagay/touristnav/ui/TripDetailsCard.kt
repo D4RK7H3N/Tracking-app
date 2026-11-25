@@ -498,13 +498,12 @@ private fun BannerLine(iconRes: Int, text: String) {
  *
  * A tricycle ride shows its amount. An island trip shows the tricycle leg to
  * the port, marked as such, because the boat fare is not published and the
- * land amount is not the price of the whole trip. A bus ride shows that its
- * fare is not verified rather than a tricycle fare that does not apply.
+ * land amount is not the price of the whole trip. An unverified route shows
+ * that its fare is not known rather than a tricycle fare that does not apply.
  */
 private fun fareHeadline(fare: FareScope): String = when (fare) {
     is FareScope.MotorizedTricycle -> FareFormat.peso(fare.amount)
     is FareScope.Island -> FareFormat.peso(fare.tricycleToPort.amount)
-    FareScope.Bus -> "Not verified"
     FareScope.Unverified -> "Not verified"
 }
 
@@ -549,11 +548,6 @@ private fun FareBasisBlock(fare: FareScope) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        FareScope.Bus -> Text(
-            "Bus fare not verified: the published matrix prices tricycle rides only.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
         FareScope.Unverified -> Text(
             "Fare not verified: local public-transport details need confirmation.",
             style = MaterialTheme.typography.bodySmall,

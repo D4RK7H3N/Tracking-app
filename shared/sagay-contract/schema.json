@@ -20,7 +20,7 @@
           "colorHex": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
           "colorName": { "type": "string" },
           "serviceArea": { "type": "string" },
-          "vehicles": { "type": "array", "items": { "enum": ["tricycle", "reporm2", "bus", "boat"] }, "minItems": 1 }
+          "vehicles": { "type": "array", "items": { "enum": ["tricycle", "reporm2", "boat"] }, "minItems": 1 }
         }
       }
     },
@@ -106,7 +106,7 @@
           "terminalId": { "type": "string" },
           "colorHex": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
           "colorName": { "type": "string" },
-          "vehicle": { "enum": ["tricycle", "reporm2", "bus", "boat"] },
+          "vehicle": { "enum": ["tricycle", "reporm2", "boat"] },
           "stops": {
             "type": "array",
             "items": {

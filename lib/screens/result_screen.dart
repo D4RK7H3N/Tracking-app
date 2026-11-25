@@ -141,7 +141,7 @@ class _ResultScreenState extends State<ResultScreen> {
       final messenger = ScaffoldMessenger.of(context);
       // Do not put an unverified amount into trip history as if it were a
       // published fare (mirrors the native app's zero-value unverified fare).
-      if (current.scope is BusFare || current.scope is UnverifiedFare) {
+      if (current.scope is UnverifiedFare) {
         messenger.showSnackBar(
           const SnackBar(content: Text('Fare not verified; trip not saved.')),
         );
@@ -204,7 +204,6 @@ class _ResultScreenState extends State<ResultScreen> {
             icon: Icons.payments_outlined,
             title: switch (quote?.scope) {
               IslandFare() => 'Island Fare',
-              BusFare() => 'Bus Fare',
               UnverifiedFare() => 'Fare',
               _ => 'Estimated Tricycle Fare',
             },
@@ -236,7 +235,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
           // Terminal card with the big colour chip.
           ResultCard(
-            icon: Icons.directions_bus,
+            icon: Icons.place,
             title: 'Tricycle Terminal',
             child: _TerminalSection(
               terminal: terminal,
@@ -532,7 +531,7 @@ class _FareSection extends StatelessWidget {
                     ),
                     style: theme.textTheme.displaySmall?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: scope is BusFare || scope is UnverifiedFare
+                      color: scope is UnverifiedFare
                           ? theme.colorScheme.error
                           : theme.colorScheme.primary,
                     ),
@@ -852,7 +851,7 @@ class _MiniMap extends StatelessWidget {
                 child: CircleAvatar(
                   backgroundColor: terminalColor,
                   child: const Icon(
-                    Icons.directions_bus,
+                    Icons.place,
                     color: Colors.white,
                     size: 18,
                   ),

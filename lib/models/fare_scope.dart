@@ -3,10 +3,11 @@ import 'fare_rule.dart';
 /// What the displayed fare means, scoped to the vehicle carrying the trip.
 ///
 /// Mirrors the native `FareScope` contract: the city publishes fares for
-/// motorized tricycles only. The matrix may be applied to tricycle and
-/// Reporm 2 rides; a bus ride has no published fare; an island trip is a
-/// tricycle ride to the port plus a boat leg whose fare is unpublished.
-/// The two legs are never added together into one claimed total.
+/// motorized tricycles only. The matrix applies to tricycle rides and to
+/// Reporm 2 rides (a motorized tricycle body); an island trip is a tricycle
+/// ride to the port plus a boat leg whose fare is unpublished. The two legs
+/// are never added together into one claimed total. A vehicle that is not
+/// known carries no claimable fare.
 sealed class FareScope {
   const FareScope();
 
@@ -36,7 +37,6 @@ class MotorizedTricycleFare extends FareScope {
     required this.amount,
     required this.isOfficial,
     required this.basis,
-    this.qualifier = '',
   });
 
   @override
@@ -48,9 +48,6 @@ class MotorizedTricycleFare extends FareScope {
   @override
   final String basis;
 
-  /// Extra wording when a zone fare is applied to a non-tricycle body.
-  final String qualifier;
-
   @override
   bool get canDiscount => isOfficial;
 
@@ -59,33 +56,6 @@ class MotorizedTricycleFare extends FareScope {
 
   @override
   String headline(String Function(double amount) formatFare) => formatFare(amount);
-
-  /// Basis including the vehicle qualifier, when one applies.
-  String get displayBasis => '$basis$qualifier';
-}
-
-/// The city publishes no bus fare.
-class BusFare extends FareScope {
-  const BusFare();
-
-  @override
-  bool get canDiscount => false;
-
-  @override
-  bool get isOfficial => false;
-
-  @override
-  double get amount => 0;
-
-  @override
-  String get basis =>
-      'Bus fare not verified: the published matrix prices tricycle rides only.';
-
-  @override
-  String get label => 'fare not verified';
-
-  @override
-  String headline(String Function(double amount) formatFare) => 'Not verified';
 }
 
 /// An island trip: the land leg to the port is priced; the boat is not.
@@ -112,7 +82,7 @@ class IslandFare extends FareScope {
 
   @override
   String get basis =>
-      'Tricycle fare to the port: ${tricycleToPort.displayBasis}\n'
+      'Tricycle fare to the port: ${tricycleToPort.basis}\n'
       'Boat fare not verified';
 }
 
@@ -152,8 +122,9 @@ class FareQuote {
 
 /// Builds the [FareScope] for a route from the already computed [estimate].
 ///
-/// An island trip always prices its land leg as a tricycle ride. A bus or an
-/// unknown vehicle keeps its distance but carries no claimable fare.
+/// An island trip always prices its land leg as a tricycle ride. Reporm 2 is
+/// a motorized tricycle, so it shares the tricycle scope and its discount.
+/// An unknown vehicle carries no claimable fare.
 FareScope scopeForFare({
   required FareEstimate estimate,
   required String? vehicle,
@@ -168,20 +139,10 @@ FareScope scopeForFare({
 
   switch (vehicle?.trim().toLowerCase()) {
     case 'tricycle':
-      return tricycle;
     case 'reporm2':
-      // The zone matrix covers the motorized tricycle body; the Reporm 2
-      // fare itself is not published, so say so in the basis.
-      return MotorizedTricycleFare(
-        amount: estimate.amount,
-        isOfficial: estimate.official,
-        basis: estimate.basis,
-        qualifier: estimate.official
-            ? ' (zone fare; reporm 2 fare not published)'
-            : '',
-      );
-    case 'bus':
-      return const BusFare();
+      // Reporm 2 has a motorized tricycle body, so the published matrix and
+      // its 20% discount apply to it exactly as they do to a tricycle.
+      return tricycle;
     default:
       return const UnverifiedFare();
   }

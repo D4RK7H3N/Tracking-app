@@ -146,9 +146,6 @@ class FareCalculatorViewModel @Inject constructor(
         }
 
         val caveat = when (route.vehicle) {
-            VehicleType.BUS ->
-                "Bus fares are not published; this is the tricycle matrix fare for " +
-                    entry.destinationZone + "."
             VehicleType.BOAT ->
                 "Boat fares are not published; this is the tricycle matrix fare for " +
                     entry.destinationZone + "."

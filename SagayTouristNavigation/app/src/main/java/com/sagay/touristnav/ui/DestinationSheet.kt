@@ -67,7 +67,7 @@ fun DestinationSheet(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var routeFilter by rememberSaveable { mutableStateOf("All") }
-    val filters = listOf("All", "Starred", "Red", "Yellow", "Pink", "Bus", "Boat")
+    val filters = listOf("All", "Starred", "Red", "Yellow", "Pink", "Boat")
     val filtered = remember(destinations, query, routes, routeFilter, favoriteIds) {
         val q = query.trim().lowercase()
         destinations.filter { destination ->
@@ -77,7 +77,6 @@ fun DestinationSheet(
             val route = routes[destination.routeId]
             val matchesRoute = when (routeFilter) {
                 "Starred" -> destination.id in favoriteIds
-                "Bus" -> route?.vehicle == VehicleType.BUS
                 "Boat" -> destination.requiresBoat || route?.vehicle == VehicleType.BOAT
                 "All" -> true
                 else -> route?.colorName.equals(routeFilter, ignoreCase = true) == true

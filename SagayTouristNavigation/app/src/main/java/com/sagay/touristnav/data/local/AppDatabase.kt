@@ -91,7 +91,7 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        /** Adds bus / jeepney routes and their ordered stops. */
+        /** Adds the legacy route tables and their ordered stops. */
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -115,10 +115,10 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /**
-         * Generalises the bus routes into routes: a route owns the colour of
-         * its vehicle, so one terminal can board several colours. The old
-         * bus-only tables are dropped; the bundled seed re-inserts the
-         * routes, so nothing is copied over from the legacy tables.
+         * Generalises the legacy routes into routes: a route owns the colour
+         * of its vehicle, so one terminal can board several colours. The old
+         * legacy tables are dropped; the bundled seed re-inserts the routes,
+         * so nothing is copied over from them.
          */
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {

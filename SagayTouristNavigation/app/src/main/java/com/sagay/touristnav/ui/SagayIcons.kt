@@ -37,7 +37,6 @@ object SagayIcons {
 
     /** Drawable for each vehicle type. */
     fun drawableFor(vehicle: VehicleType): Int = when (vehicle) {
-        VehicleType.BUS -> R.drawable.ic_directions_bus
         VehicleType.TRICYCLE -> R.drawable.ic_electric_rickshaw
         VehicleType.REPORM_2 -> R.drawable.ic_tricycle_reporm2
         VehicleType.BOAT -> R.drawable.ic_directions_boat

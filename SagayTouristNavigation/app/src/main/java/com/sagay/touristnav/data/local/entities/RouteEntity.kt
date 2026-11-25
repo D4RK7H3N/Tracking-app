@@ -15,7 +15,7 @@ data class RouteEntity(
     val vehicle: String,
 )
 
-/** One stop of a bus route, in travel order. */
+/** One stop of a route, in travel order. */
 @Entity(tableName = "route_stop", primaryKeys = ["routeId", "stopOrder"])
 data class RouteStopEntity(
     val routeId: String,
