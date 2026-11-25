@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sagay_tourist_navigator/services/distance_service.dart';
+import 'package:sagay_tourist_navigator/services/haversine.dart';
 
 void main() {
   group('DistanceService.haversineKm', () {
@@ -62,6 +63,22 @@ void main() {
       const a = LatLng(10.90, 123.43);
       const b = LatLng(10.90, 123.42);
       expect(DistanceService.bearingDeg(a, b), closeTo(270, 1));
+    });
+  });
+
+  group('isRoadDistanceSuspicious', () {
+    test('flags road distance below or far above the straight line', () {
+      expect(isRoadDistanceSuspicious(5, 10), isTrue);
+      expect(isRoadDistanceSuspicious(31, 10), isTrue);
+    });
+
+    test('accepts a plausible road distance', () {
+      expect(isRoadDistanceSuspicious(20, 10), isFalse);
+      expect(isRoadDistanceSuspicious(10, 10), isFalse);
+    });
+
+    test('a zero straight-line distance cannot be judged', () {
+      expect(isRoadDistanceSuspicious(5, 0), isFalse);
     });
   });
 

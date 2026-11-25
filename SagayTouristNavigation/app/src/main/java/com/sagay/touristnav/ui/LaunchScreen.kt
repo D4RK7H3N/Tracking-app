@@ -55,7 +55,17 @@ fun LaunchScreen(onDone: () -> Unit) {
     val pinProgress = remember { Animatable(0f) }
     val textProgress = remember { Animatable(0f) }
 
+    val reduceMotion = Motion.reduced()
     LaunchedEffect(Unit) {
+        if (reduceMotion) {
+            // Respect the OS reduce-motion setting: show the final frame and
+            // skip straight to the map instead of playing the animation.
+            routeProgress.snapTo(1f)
+            pinProgress.snapTo(1f)
+            textProgress.snapTo(1f)
+            finish()
+            return@LaunchedEffect
+        }
         launch { routeProgress.animateTo(1f, tween(1300, easing = FastOutSlowInEasing)) }
         delay(800)
         launch {
@@ -87,8 +97,8 @@ fun LaunchScreen(onDone: () -> Unit) {
             Text(
                 "Sagay Tourist Navigator",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
+                fontWeight = FontWeight.ExtraBold,
+                color = SagayColors.DeepOceanDark,
                 modifier = Modifier.graphicsLayer {
                     alpha = textProgress.value.coerceIn(0f, 1f)
                     translationY = (1f - textProgress.value.coerceIn(0f, 1f)) * 24f
@@ -98,7 +108,7 @@ fun LaunchScreen(onDone: () -> Unit) {
             Text(
                 "Your ride around Sagay City",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.88f),
+                color = SagayColors.Ink.copy(alpha = 0.82f),
                 modifier = Modifier.graphicsLayer {
                     alpha = textProgress.value.coerceIn(0f, 1f)
                     translationY = (1f - textProgress.value.coerceIn(0f, 1f)) * 24f
@@ -124,7 +134,7 @@ private fun RouteToPinAnimation(
     val pathMeasure = remember {
         PathMeasure().also { it.setPath(routePath, false) }
     }
-    val pinColor = Color(0xFFFFF59D)
+    val pinColor = Color.White
 
     Canvas(modifier) {
         val total = pathMeasure.length
@@ -132,7 +142,7 @@ private fun RouteToPinAnimation(
         pathMeasure.getSegment(0f, total * routeProgress.coerceIn(0f, 1f), drawn, true)
         drawPath(
             drawn,
-            color = Color.White,
+            color = SagayColors.DeepOceanDark,
             style = Stroke(width = 6f, cap = StrokeCap.Round),
         )
 
@@ -154,6 +164,6 @@ private fun RouteToPinAnimation(
         }
         drawPath(tail, color = pinColor, alpha = alpha)
         drawCircle(color = pinColor, radius = 11f, center = pinCenter, alpha = alpha)
-        drawCircle(color = SagayColors.SunriseDeep, radius = 4.5f, center = pinCenter, alpha = alpha)
+        drawCircle(color = SagayColors.Coral, radius = 4.5f, center = pinCenter, alpha = alpha)
     }
 }

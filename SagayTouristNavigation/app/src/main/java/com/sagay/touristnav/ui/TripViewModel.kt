@@ -9,7 +9,6 @@ import com.sagay.touristnav.domain.Haversine
 import com.sagay.touristnav.domain.JourneyGuidance
 import com.sagay.touristnav.domain.TripSummary
 import com.sagay.touristnav.domain.models.Destination
-import com.sagay.touristnav.domain.models.RoutePoint
 import com.sagay.touristnav.domain.models.RouteSummary
 import com.sagay.touristnav.domain.models.Terminal
 import com.sagay.touristnav.domain.models.TripEstimate
@@ -55,6 +54,7 @@ class TripViewModel @Inject constructor(
     private var pendingDestinationId: String? = null
 
     private var fetchJob: Job? = null
+    private var guidanceJob: Job? = null
 
     /** Student / senior citizen / PWD discount (20% in the city matrix). */
     private var discounted: Boolean = false
@@ -139,7 +139,9 @@ class TripViewModel @Inject constructor(
     private fun locate() {
         _state.value = UiState.Locating
         viewModelScope.launch {
-            val fix = locationProvider.getCurrentLocation()
+            // Bound the first fix too: a hung fused request must not leave the
+            // user on a permanent spinner.
+            val fix = withTimeoutOrNull(10_000) { locationProvider.getCurrentLocation() }
             if (fix == null) {
                 _state.value = UiState.GpsError(
                     "Could not get your location. Make sure GPS/location " +
@@ -163,6 +165,7 @@ class TripViewModel @Inject constructor(
     }
 
     fun onDestinationSelected(destination: Destination) {
+        stopGuidanceUpdates()
         fetchJob?.cancel()
         fetchJob = viewModelScope.launch {
             val terminal = mapData.terminals[destination.terminalId]
@@ -213,21 +216,48 @@ class TripViewModel @Inject constructor(
     }
 
     fun selectNewDestination() {
+        stopGuidanceUpdates()
         fetchJob?.cancel()
         fetchJob = null
         _state.value = UiState.MapReady(mapData)
     }
 
+    /**
+     * Starts guidance and keeps it live: the fused provider streams positions,
+     * and every fix re-projects the user onto the saved route so progress,
+     * remaining distance and the change/arrival prompts update as you move.
+     */
     fun startGuidance() {
         val shown = _state.value as? UiState.ResultShown ?: return
         guidedTrip = shown.trip
         _state.value = guidanceState(shown.trip)
+        guidanceJob?.cancel()
+        guidanceJob = viewModelScope.launch {
+            try {
+                locationProvider.locationUpdates().collect { fix ->
+                    mapData = mapData.copy(position = fix)
+                    guidedTrip?.let { _state.value = guidanceState(it) }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Keep the last known snapshot and the trip itself usable;
+                // guidance simply stops advancing until the next Locate Me.
+            }
+        }
     }
 
     fun endGuidance() {
         val trip = guidedTrip ?: return
-        guidedTrip = null
+        stopGuidanceUpdates()
         _state.value = UiState.ResultShown(mapData, trip)
+    }
+
+    /** Cancels the live position stream without changing the displayed state. */
+    private fun stopGuidanceUpdates() {
+        guidanceJob?.cancel()
+        guidanceJob = null
+        guidedTrip = null
     }
 
     private fun guidanceState(trip: TripEstimate): UiState.Guidance {
@@ -321,8 +351,8 @@ class TripViewModel @Inject constructor(
         destination: Destination,
         terminal: Terminal?,
     ) {
+        val resolvedTerminal = terminal ?: fallbackTerminal(destination)
         try {
-            val resolvedTerminal = terminal ?: fallbackTerminal(destination)
             val route = repository.fetchRoute(
                 origin = origin,
                 targetLat = if (destination.requiresBoat) resolvedTerminal.lat else destination.lat,
@@ -345,47 +375,27 @@ class TripViewModel @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: IOException) {
-            val resolvedTerminal = terminal ?: fallbackTerminal(destination)
-            val targetLat = if (destination.requiresBoat) {
-                resolvedTerminal.lat
-            } else {
-                destination.lat
-            }
-            val targetLng = if (destination.requiresBoat) {
-                resolvedTerminal.lng
-            } else {
-                destination.lng
-            }
-            val straightKm = Haversine.km(origin.lat, origin.lng, targetLat, targetLng)
-            val estimatedKm = straightKm * 1.3
-            val fallback = RouteSummary(
-                roadKm = estimatedKm,
-                durationMinutes = estimatedKm / 20.0 * 60.0,
-                points = listOf(
-                    RoutePoint(origin.lat, origin.lng),
-                    RoutePoint(targetLat, targetLng),
-                ),
-            )
-            cachedRoute = fallback
-            cachedOrigin = origin
-            cachedDestination = destination
-            cachedTerminal = resolvedTerminal
-            clearPendingTrip()
-            _state.value = UiState.ResultShown(
-                mapData,
-                repository.estimateTrip(
-                    origin = origin,
-                    destination = destination,
+            if (isOnline) {
+                // A timeout or a broken connection while online is retryable;
+                // it must not be mistaken for an offline trip.
+                _state.value = UiState.RouteError(
+                    data = mapData,
+                    selected = destination,
                     terminal = resolvedTerminal,
-                    route = fallback,
-                    discounted = discounted,
-                ),
-            )
+                    message = e.message ?: "Could not reach the routing service. Please retry.",
+                )
+            } else {
+                // Genuinely offline: save the trip so it resumes on reconnect.
+                pendingTripId = repository.savePendingTrip(origin, destination.id, pendingTripId)
+                pendingOrigin = origin
+                pendingDestinationId = destination.id
+                _state.value = UiState.WaitingForInternet(mapData, destination, resolvedTerminal)
+            }
         } catch (e: Exception) {
             _state.value = UiState.RouteError(
                 data = mapData,
                 selected = destination,
-                terminal = terminal,
+                terminal = resolvedTerminal,
                 message = e.message ?: "Could not fetch the route.",
             )
         }
@@ -400,15 +410,25 @@ class TripViewModel @Inject constructor(
         pendingDestinationId = null
     }
 
-    private fun fallbackTerminal(destination: Destination) = Terminal(
-        id = destination.terminalId,
-        name = "Terminal info unavailable",
-        lat = destination.lat,
-        lng = destination.lng,
-        colorHex = "#9E9E9E",
-        colorName = "Unknown",
-        serviceArea = "",
-    )
+    /**
+     * Last-resort terminal when the seeded lookup fails. Never route to the
+     * destination itself: for an island that point is offshore and the driving
+     * profile cannot cross water. Use the nearest known land terminal instead.
+     */
+    private fun fallbackTerminal(destination: Destination): Terminal {
+        mapData.terminals[destination.terminalId]?.let { return it }
+        return mapData.terminals.values.minByOrNull { terminal ->
+            Haversine.km(destination.lat, destination.lng, terminal.lat, terminal.lng)
+        } ?: Terminal(
+            id = destination.terminalId,
+            name = "Terminal info unavailable",
+            lat = mapData.position.lat,
+            lng = mapData.position.lng,
+            colorHex = "#9E9E9E",
+            colorName = "Unknown",
+            serviceArea = "",
+        )
+    }
 
     private companion object {
         const val SAGAY_CENTER_LAT = 10.896

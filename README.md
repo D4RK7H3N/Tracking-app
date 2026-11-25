@@ -35,9 +35,9 @@ An animated preview of the app on a physical device — planning the trip from
 [Watch the full 2:55 recording (MP4, 7.6 MB)](docs/demo/sagay-tourist-navigator-demo.mp4) ·
 [About the recording](docs/demo/README.md).
 
-## Native Android app — v1.0.0
+## Native Android app — v1.1.0
 
-The current implementation: Kotlin + Jetpack Compose, MVVM with `StateFlow`,
+The current implementation (`versionCode 2`): Kotlin + Jetpack Compose, MVVM with `StateFlow`,
 Hilt dependency injection, Room (SQLite) persistence, osmdroid maps, OSRM road
 routing, and Google fused location. Offline-capable — bundled seed data ships
 in the APK and pending trips are saved and resume when connectivity returns.
@@ -50,7 +50,9 @@ in the APK and pending trips are saved and resume when connectivity returns.
 - **Fare estimate** from the official Sagay City fare matrix (Resolution No.
   2026-117): flat **₱15–₱40** per tricycle trip, with a **20%** discount for
   seniors, students and PWDs.
-- **Branded adaptive launcher icon** and the calm-teal "Sunrise Route" theme.
+- **Fresh "Deep Ocean / Coral" visual identity** — new palette, typography, shapes and motion, with the vehicle glyphs and data-driven route colours deliberately kept.
+- **First-run onboarding**, an offline **fare calculator** with group totals, and a **Settings & data** sheet with a reduce-motion override and clear-history action.
+- **Branded adaptive launcher icon** and a warm coral-to-gold launch animation.
 - **Map zoom controls** and a responsive **Locate Me** button.
 - **Rotation-safe state** and saved trips that survive app updates
   (Room schema v9).
@@ -74,7 +76,7 @@ cd SagayTouristNavigation
 See [`SagayTouristNavigation/README.md`](SagayTouristNavigation/README.md) for
 the architecture and data-replacement guide, and
 [`SagayTouristNavigation/RELEASE_NOTES.md`](SagayTouristNavigation/RELEASE_NOTES.md)
-for the full v1.0.0 changelog. Full app documentation (user guide, architecture,
+for the changelog (v1.1.0 current, with the v1.0.0 history below it). Full app documentation (user guide, architecture,
 state machine, data model, routing, fare, offline behaviour, build, testing):
 [`docs/APP_DOCUMENTATION.md`](docs/APP_DOCUMENTATION.md).
 

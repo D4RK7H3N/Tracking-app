@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 	<dict>
-		<key>CADisableMinimumFrameDurationOnPhone</key>
-		<true/>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
@@ -24,10 +22,16 @@
 		<string>????</string>
 		<key>CFBundleVersion</key>
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
-		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>Your location is used to measure travel distance and estimate tricycle fares to destinations in Sagay City.</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Sagay Tourist Navigator uses your location to show where you are on the map and to compute routes and tricycle fares to destinations in Sagay City.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Sagay Tourist Navigator uses your location to show where you are and to compute routes while you are navigating the city.</string>
+		<key>UILaunchStoryboardName</key>
+		<string>LaunchScreen</string>
+		<key>UIMainStoryboardFile</key>
+		<string>Main</string>
 		<key>UIApplicationSceneManifest</key>
 		<dict>
 			<key>UIApplicationSupportsMultipleScenes</key>
@@ -37,10 +41,8 @@
 				<key>UIWindowSceneSessionRoleApplication</key>
 				<array>
 					<dict>
-						<key>UISceneClassName</key>
-						<string>UIWindowScene</string>
 						<key>UISceneConfigurationName</key>
-						<string>flutter</string>
+						<string>Default Configuration</string>
 						<key>UISceneDelegateClassName</key>
 						<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
 						<key>UISceneStoryboardFile</key>
@@ -49,12 +51,6 @@
 				</array>
 			</dict>
 		</dict>
-		<key>UIApplicationSupportsIndirectInputEvents</key>
-		<true/>
-		<key>UILaunchStoryboardName</key>
-		<string>LaunchScreen</string>
-		<key>UIMainStoryboardFile</key>
-		<string>Main</string>
 		<key>UISupportedInterfaceOrientations</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>
@@ -68,6 +64,10 @@
 			<string>UIInterfaceOrientationLandscapeLeft</string>
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
+		<key>CADisableMinimumFrameDurationOnPhone</key>
+		<true/>
+		<key>UIApplicationSupportsIndirectInputEvents</key>
+		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
 	</dict>

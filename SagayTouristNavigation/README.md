@@ -11,8 +11,12 @@ Negros Occidental, Philippines.
 - Room (SQLite) local database seeded from `app/src/main/assets/seed.json`
 - Retrofit + OkHttp + kotlinx.serialization
 - Google Fused Location Provider for GPS
-- **Needs internet** for the map tiles and road routing. It is NOT an offline app.
-  (Offline trips are saved and fetched automatically once internet returns.)
+- **Offline-first for data, online for tiles and routing.** The city data
+  (terminals, destinations, fare matrix and rules) is **bundled in the APK** and
+  needs no network. **Map tiles and road routing do need internet**; offline map
+  packs store tiles locally for a bounded Sagay City area. If you pick a
+  destination while offline, the trip is saved as `PENDING_ROUTE` and the road
+  route is fetched automatically once connectivity returns.
 - **No API keys required.** To move to Mapbox or Google Maps later you will
   need their keys and (currently) a billing method on the provider account.
 
@@ -102,11 +106,14 @@ The **Terminals & routes** button above the destination list opens a legend
 of all routes — the cheat sheet for "which one is the red one?".
 ## Icons
 
-The app ships **no icon dependency**. `material-icons-extended` is not on the
-classpath, and because the release build does not run R8 or resource
-shrinking, adding it would ship all 2 084 icons in the APK.
+The app uses **local vector drawables** for its icons rather than calling the
+Material Icons composables directly. `material-icons-extended` **is** declared
+on the classpath (`app/build.gradle.kts`), and because the release build does
+not run R8 or resource shrinking, calling it from Compose would ship all 2 084
+icons in the APK. The project therefore keeps only the handful of icons it uses
+as local Android `<vector>` drawables.
 
-Instead, `tools/extract-material-icons.ps1` reads the `material-icons-extended`
+`tools/extract-material-icons.ps1` reads the `material-icons-extended`
 AAR and decompiles each icon's vector path out of the generated Kotlin
 bytecode, emitting local Android `<vector>` drawables under
 `app/src/main/res/drawable/`. The result is pixel-accurate Material art in
@@ -137,6 +144,10 @@ The city publishes **flat fares per route**, not a distance formula:
 | Paraiso | 6 | â‚±15 “ â‚±33 |
 | Brgy. Old Sagay | 1 | â‚±15 |
 | Brgy. Bato | 3 | â‚±17 “ â‚±25 |
+
+These are the **39 published rows**. The seed also carries **one additional
+owner-supplied corridor row** (Old Sagay → Sagay City, ₱20 / ₱16) used by the
+two-service rule below, for **40 stored rows in total**.
 
 The app therefore:
 
@@ -254,7 +265,8 @@ are stored in travel order.
 3. **Fare values** — `assets/seed.json` -> `fare_rule` (the distance fallback:
    `baseFare=15`, `baseKm=3`, `extraPerKm=2`, `maxFare=40`, source
    "Sagay City Resolution No. 2026-117") and `fare_matrix` / `fare_origins`
-   (the 39 published routes and the 5 origin zones, including the 20%
+   (the 40 stored matrix rows — 39 published plus one owner-supplied
+    Old Sagay → Sagay City corridor row — and the 5 origin zones, including the 20%
    student / senior / PWD fares). The matrix is the city's temporary order —
    replace both when the official schedules are published.
 4. **Fare rounding rule** — `domain/FareCalculator.kt` uses
@@ -275,7 +287,9 @@ are stored in travel order.
 ```
 app/src/main/java/com/sagay/touristnav/
  ui/         MapScreen, DestinationSheet, TripDetailsCard, TerminalLegendSheet,
-             SagayIcons, PermissionPrompt, TripViewModel, UiState
+             OnboardingScreen, FareCalculatorScreen, SettingsSheet,
+             SagayIcons, PermissionPrompt, TripViewModel, UiState,
+             Theme, Motion, MotionPrefs, OnboardingPrefs
   domain/     FareCalculator, TripEstimator, Haversine,
               FareZoneDetector / FareMatrixLookup, models
               (Terminal, VehicleType, Destination, FareRule, TripEstimate,
@@ -288,6 +302,18 @@ app/src/main/java/com/sagay/touristnav/
  platform/   LocationProvider (Fused), ConnectivityObserver
 tools/       extract-material-icons.ps1 (Material icon -> vector drawable)
 ```
+
+### New screens (v1.1.0)
+
+- **Onboarding** — three-page first-run tour (search, colour-coded vehicle,
+  official matrix fare), persisted in `OnboardingPrefs`.
+- **Fare calculator** — offline tool: choose an origin zone and a route, see
+  the regular and 20%-discounted official fare plus a group total. Bus, boat
+  and unknown routes are explicitly "not verified".
+- **Settings & data** — OS/in-app reduce-motion control, clear trip history
+  with confirmation, and the data-verification caveat.
+- The palette is now Deep Ocean / Coral / Sunrise Gold / Warm Mist. The
+  vehicle drawables and data-driven route colours are unchanged by design.
 
 Runtime state machine:
 `NeedsPermission -> Locating -> MapReady -> DestinationSelected ->

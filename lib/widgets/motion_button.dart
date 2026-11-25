@@ -35,6 +35,8 @@ class _MotionIconButtonState extends State<MotionIconButton>
 
   @override
   Widget build(BuildContext context) {
+    // Respect the OS reduce-motion setting: the press scale becomes instant.
+    _scale.duration = Motion.duration(context, Motion.micro);
     return Listener(
       onPointerDown: (_) => _scale.reverse(),
       onPointerUp: (_) => _scale.forward(),

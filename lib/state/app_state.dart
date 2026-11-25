@@ -7,6 +7,8 @@ import '../models/destination.dart';
 import '../services/data_service.dart';
 import '../services/distance_service.dart';
 import '../services/location_service.dart';
+import '../services/map_tiles.dart';
+import '../services/settings_store.dart';
 
 /// Lifecycle of the distance lookup shown on the result screen.
 enum DistanceLoadState { idle, loading, done, error }
@@ -34,11 +36,39 @@ class AppState extends ChangeNotifier {
     required this._dataService,
     required this._locationService,
     required this._distanceService,
-  });
+    SettingsStore? settingsStore,
+  }) : _settingsStore = settingsStore ?? SettingsStore();
 
   final DataService _dataService;
   final LocationService _locationService;
   final DistanceService _distanceService;
+  final SettingsStore _settingsStore;
+
+  /// User override for reduce-motion, applied app-wide through MediaQuery.
+  /// null means "follow the device setting".
+  final ValueNotifier<bool?> motionOverride = ValueNotifier<bool?>(null);
+
+  /// Shared tile source for every map view. Refreshed when an offline pack is
+  /// downloaded or deleted so all maps switch over immediately.
+  final MapTileController mapTiles = MapTileController();
+
+  @override
+  void dispose() {
+    mapTiles.dispose();
+    motionOverride.dispose();
+    super.dispose();
+  }
+
+  /// Loads the persisted reduce-motion preference at startup.
+  Future<void> loadSettings() async {
+    motionOverride.value = await _settingsStore.reduceMotion();
+  }
+
+  /// null clears the override and returns to the device setting.
+  Future<void> setReduceMotion(bool? value) async {
+    await _settingsStore.setReduceMotion(value);
+    motionOverride.value = value;
+  }
 
 
   // ---- bundled city data ----
@@ -180,4 +210,7 @@ class AppState extends ChangeNotifier {
 
   /// Retry entry point for the result screen's retry button.
   void retryDistance() => loadDistance();
+
+  /// Re-checks the offline tile pack and updates every map's tile source.
+  Future<void> refreshMapTiles() => mapTiles.refresh();
 }

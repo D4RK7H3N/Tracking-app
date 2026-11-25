@@ -9,16 +9,21 @@ import 'package:share_plus/share_plus.dart';
 
 import '../models/destination.dart';
 import '../models/fare_origin.dart' show detectFareOrigin;
-import '../models/route.dart' show RouteStop;
-import '../models/fare_rule.dart' show Discount, FareEstimate;
+import '../models/fare_scope.dart';
+import '../models/journey.dart' show JourneyPlan;
+import '../models/route.dart';
+import '../models/fare_rule.dart' show Discount;
 import '../models/terminal.dart';
-import '../services/distance_service.dart' show DistanceService;
+import '../services/distance_service.dart' show DistanceResult, DistanceService;
 import '../services/fare_service.dart';
+import '../services/haversine.dart' show haversineKm, isRoadDistanceSuspicious;
+import '../services/map_tiles.dart' show TileSource;
 import '../services/trip_store.dart';
 import '../state/app_state.dart';
 import '../theme/motion.dart';
 import '../widgets/color_chip.dart';
 import '../widgets/compass_indicator.dart';
+import '../widgets/map_tile_layer.dart';
 import '../widgets/result_card.dart';
 import 'guidance_screen.dart';
 
@@ -53,47 +58,57 @@ class _ResultScreenState extends State<ResultScreen> {
 
     final terminal = data.terminalForDestination(destination);
     final theme = Theme.of(context);
-
-    // Fare (null until a distance is available).
-    final distance = appState.distanceResult;
     final position = appState.location.position;
-    final FareEstimate? estimate = distance == null
+
+    // The origin decides which matrix row and which access rule apply.
+    final origin = position == null
         ? null
-        : _fareService.estimate(
+        : detectFareOrigin(position.latitude, position.longitude, data.fareOrigins);
+    final journey = data.journeyFor(origin?.zone ?? '', destination);
+
+    // Fare (null until a distance is available). Scoping decides whether the
+    // amount is a tricycle fare, an island land leg, or not verified at all.
+    final distance = appState.distanceResult;
+    final FareQuote? quote = distance == null
+        ? null
+        : _fareService.quote(
             data: data,
             destination: destination,
             roadKm: distance.km,
             discounted: _applyDiscount,
-            originLat: position?.latitude,
-            originLng: position?.longitude,
+            originZone: origin?.zone,
           );
 
-    String shareText(FareEstimate result) => <String>[
-          'Sagay Tourist Navigator',
-          'Destination: ${destination.name}',
-          'Service: ${data.routeForDestination(destination)?.serviceLabel ?? 'not published'}',
-          'Fare per passenger: ${_fareService.formatFare(result.amount)}',
-          if (_passengers > 1) ...[
-            'Passengers: $_passengers',
-            'Group total: ${_fareService.formatFare(
-                  _fareService.groupTotal(result.amount, _passengers),
-                )}',
-          ],
-          'Estimate only. Actual fares may vary.',
-        ].join('\n');
+    String shareText(FareQuote result) {
+      final scope = result.scope;
+      final priceable = scope is MotorizedTricycleFare || scope is IslandFare;
+      final serviceLabels = journey.services
+          .map((service) => service.serviceLabel)
+          .join(' + ');
+      return <String>[
+        'Sagay Tourist Navigator',
+        'Destination: ${destination.name}',
+        'Service: ${serviceLabels.isEmpty ? 'not published' : serviceLabels}',
+        if (journey.changeAt != null) 'Change at: ${journey.changeAt}',
+        if (priceable)
+          '${scope is IslandFare ? 'Tricycle fare to the port' : 'Fare per passenger'}: '
+              '${_fareService.formatFare(scope.amount)}'
+        else
+          'Fare per passenger: Not verified',
+        if (scope is IslandFare) 'Boat fare not verified',
+        if (scope.canDiscount && _passengers > 1) ...[
+          'Passengers: $_passengers',
+          'Group total: ${_fareService.formatFare(
+                _fareService.groupTotal(scope.amount, _passengers),
+              )}',
+        ],
+        'Estimate only. Actual fares may vary.',
+      ].join('\n');
+    }
 
     void startGuidance() {
       final routePoints = appState.distanceResult?.routePoints ?? const <LatLng>[];
       if (routePoints.isEmpty) return;
-      final position = appState.location.position;
-      final origin = position == null
-          ? null
-          : detectFareOrigin(
-              position.latitude,
-              position.longitude,
-              data.fareOrigins,
-            );
-      final journey = data.journeyFor(origin?.zone ?? '', destination);
       final changeName = journey.changeAt;
       RouteStop? changeStop;
       if (changeName != null) {
@@ -121,25 +136,28 @@ class _ResultScreenState extends State<ResultScreen> {
     }
 
     void saveTrip() async {
-      final result = estimate;
-      if (result == null) return;
-      final position = appState.location.position;
-      final origin = position == null
-          ? null
-          : detectFareOrigin(
-              position.latitude,
-              position.longitude,
-              data.fareOrigins,
-            );
-      final now = DateTime.now();
+      final current = quote;
+      if (current == null) return;
       final messenger = ScaffoldMessenger.of(context);
+      // Do not put an unverified amount into trip history as if it were a
+      // published fare (mirrors the native app's zero-value unverified fare).
+      if (current.scope is BusFare || current.scope is UnverifiedFare) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Fare not verified; trip not saved.')),
+        );
+        return;
+      }
+      final result = current.estimate;
+      final now = DateTime.now();
       await context.read<TripStore>().addTrip(
             TripRecord(
               id: now.microsecondsSinceEpoch.toString(),
               destinationId: destination.id,
               destinationName: destination.name,
               originZone: origin?.zone ?? '',
-              vehicleLabel: data.routeForDestination(destination)?.serviceLabel ?? '',
+              vehicleLabel: journey.services
+                  .map((service) => service.serviceLabel)
+                  .join(' + '),
               fare: result.amount,
               discounted: result.discounted,
               passengers: _passengers,
@@ -181,12 +199,17 @@ class _ResultScreenState extends State<ResultScreen> {
             child: _DistanceSection(appState: appState),
           ),
 
-          // Fare card with optional discount toggle.
+          // Fare card: title and contents depend on the vehicle scope.
           ResultCard(
             icon: Icons.payments_outlined,
-            title: 'Estimated Tricycle Fare',
+            title: switch (quote?.scope) {
+              IslandFare() => 'Island Fare',
+              BusFare() => 'Bus Fare',
+              UnverifiedFare() => 'Fare',
+              _ => 'Estimated Tricycle Fare',
+            },
             child: _FareSection(
-              estimate: estimate,
+              quote: quote,
               onSaveTrip: saveTrip,
               onStartGuidance: startGuidance,
               passengers: _passengers,
@@ -201,6 +224,15 @@ class _ResultScreenState extends State<ResultScreen> {
               hasDistance: distance != null,
             ),
           ),
+
+          // Two-service corridors (e.g. Old Sagay -> Poblacion) are shown as
+          // a compact service row with the change point.
+          if (journey.services.length > 1)
+            ResultCard(
+              icon: Icons.route,
+              title: 'Two-service journey',
+              child: _ServiceRow(journey: journey),
+            ),
 
           // Terminal card with the big colour chip.
           ResultCard(
@@ -218,7 +250,7 @@ class _ResultScreenState extends State<ResultScreen> {
             elevation: 1.5,
             clipBehavior: Clip.antiAlias,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(24),
             ),
             child: SizedBox(
               height: 230,
@@ -226,6 +258,7 @@ class _ResultScreenState extends State<ResultScreen> {
                 appState: appState,
                 destination: destination,
                 terminal: terminal,
+                tiles: appState.mapTiles.source,
               ),
             ),
           ),
@@ -304,10 +337,27 @@ class _DistanceSection extends StatelessWidget {
     }
 
     // For sea destinations the km value covers only the road leg to the
-    // boat terminal — say so explicitly.
+    // boat terminal — say so explicitly. The same road endpoint is used for
+    // the straight-line sanity check (the offshore point would false-alarm).
     final selected = appState.selectedDestination;
-    final boatTerminalName =
-        selected == null ? null : appState.data?.terminalForDestination(selected)?.name;
+    final terminal = selected == null
+        ? null
+        : appState.data?.terminalForDestination(selected);
+    final boatTerminalName = terminal?.name;
+    final position = appState.location.position;
+    var suspicious = false;
+    if (position != null && selected != null) {
+      final roadEnd = selected.boat && terminal != null
+          ? LatLng(terminal.lat, terminal.lng)
+          : LatLng(selected.lat, selected.lng);
+      final straightKm = haversineKm(
+        position.latitude,
+        position.longitude,
+        roadEnd.latitude,
+        roadEnd.longitude,
+      );
+      suspicious = isRoadDistanceSuspicious(result.km, straightKm);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,6 +376,42 @@ class _DistanceSection extends StatelessWidget {
           ],
         ),
         if (!result.isRoadRoute) const _OfflineLabel(),
+        if (result.durationSeconds != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              _travelTimeLabel(result),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        // Display-only sanity warning: the fare is never recalculated here.
+        if (suspicious)
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.warning_amber_rounded,
+                    size: 16, color: theme.colorScheme.error),
+                const SizedBox(width: 6),
+                Text(
+                  'Distance looks unusual, please verify',
+                  style: TextStyle(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (selected?.boat == true)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -338,6 +424,18 @@ class _DistanceSection extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Travel-time line for a road route (OSRM duration) or the offline estimate.
+String _travelTimeLabel(DistanceResult result) {
+  final seconds = result.durationSeconds!;
+  final estimatePrefix = result.isRoadRoute ? '' : 'Estimated ';
+  if (seconds < 60) return '${estimatePrefix}under 1 min travel time';
+  final minutes = (seconds / 60).round();
+  if (minutes < 60) return '$estimatePrefix$minutes min travel time';
+  final hours = seconds ~/ 3600;
+  final rest = ((seconds % 3600) / 60).round();
+  return '$estimatePrefix$hours h $rest min travel time';
 }
 
 /// Visible "Estimated (offline)" badge for straight-line fallback distances.
@@ -368,11 +466,11 @@ class _OfflineLabel extends StatelessWidget {
   }
 }
 
-/// Fare block: big whole-peso figure plus the optional discount toggle
-/// (hidden entirely when the fare rule has no discounts or no distance yet).
+/// Fare block: headline, vehicle-scoped explanation, and the 20% discount
+/// toggle only when the amount is an official tricycle matrix fare.
 class _FareSection extends StatelessWidget {
   const _FareSection({
-    required this.estimate,
+    required this.quote,
     required this.onSaveTrip,
     required this.onStartGuidance,
     required this.passengers,
@@ -383,12 +481,12 @@ class _FareSection extends StatelessWidget {
     required this.hasDistance,
   });
 
-  final FareEstimate? estimate;
+  final FareQuote? quote;
   final VoidCallback onSaveTrip;
   final VoidCallback onStartGuidance;
   final int passengers;
   final ValueChanged<int> onChangePassengers;
-  final ValueChanged<FareEstimate> onShare;
+  final ValueChanged<FareQuote> onShare;
   final bool applyDiscount;
   final ValueChanged<bool> onToggleDiscount;
   final bool hasDistance;
@@ -396,12 +494,13 @@ class _FareSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final result = estimate;
+    final current = quote;
+    final scope = current?.scope;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (result == null)
+        if (current == null || scope == null)
           Text(
             hasDistance
                 ? 'Calculating…'
@@ -413,42 +512,51 @@ class _FareSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              AnimatedSwitcher(
-                duration: Motion.duration(context, Motion.layout),
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.25),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
+              Flexible(
+                child: AnimatedSwitcher(
+                  duration: Motion.duration(context, Motion.layout),
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.25),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
                   ),
-                ),
-                child: Text(
-                  _fareService.formatFare(result.amount),
-                  key: ValueKey('${result.amount}-${result.discounted}'),
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: theme.colorScheme.primary,
+                  child: Text(
+                    scope.headline(_fareService.formatFare),
+                    key: ValueKey(
+                      '${current.estimate.amount}-${current.estimate.discounted}-${scope.label}',
+                    ),
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: scope is BusFare || scope is UnverifiedFare
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.primary,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                result.official ? 'official matrix fare' : 'estimated fare',
-                style: theme.textTheme.bodyMedium,
+              Flexible(
+                child: Text(
+                  scope.label,
+                  style: theme.textTheme.bodyMedium,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            result.basis,
+            scope.basis,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          if (result.official)
+          // Native parity: only an official matrix fare can be discounted.
+          if (scope.canDiscount)
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: applyDiscount,
@@ -458,7 +566,7 @@ class _FareSection extends StatelessWidget {
                 '(${Discount.matrix.percent.round()}% off)',
               ),
             ),
-          if (result.official) ...[
+          if (scope.canDiscount) ...[
             const SizedBox(height: 8),
             Row(
               children: [
@@ -469,7 +577,8 @@ class _FareSection extends StatelessWidget {
                   tooltip: 'Fewer passengers',
                   onPressed: () => onChangePassengers(passengers - 1),
                 ),
-                Text('$passengers', style: Theme.of(context).textTheme.titleMedium),
+                Text('$passengers',
+                    style: Theme.of(context).textTheme.titleMedium),
                 IconButton(
                   icon: const Icon(Icons.add),
                   tooltip: 'More passengers',
@@ -479,7 +588,7 @@ class _FareSection extends StatelessWidget {
             ),
             if (passengers > 1)
               Text(
-                'Group total: ${_fareService.formatFare(_fareService.groupTotal(result.amount, passengers))}',
+                'Group total: ${_fareService.formatFare(_fareService.groupTotal(scope.amount, passengers))}',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
@@ -500,9 +609,57 @@ class _FareSection extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           OutlinedButton.icon(
-            onPressed: () => onShare(result),
+            onPressed: () => onShare(current),
             icon: const Icon(Icons.share),
             label: const Text('Share trip summary'),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Compact two-service row: one badge per service plus the change point.
+class _ServiceRow extends StatelessWidget {
+  const _ServiceRow({required this.journey});
+
+  final JourneyPlan journey;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: [
+            for (final service in journey.services)
+              Chip(
+                avatar: CircleAvatar(
+                  backgroundColor: service.uiColor,
+                  radius: 6,
+                ),
+                label: Text(service.serviceLabel),
+                visualDensity: VisualDensity.compact,
+              ),
+          ],
+        ),
+        if (journey.changeAt != null) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.swap_horiz, size: 18, color: theme.colorScheme.primary),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Change at ${journey.changeAt}',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ),
         ],
       ],
@@ -574,11 +731,13 @@ class _MiniMap extends StatelessWidget {
     required this.appState,
     required this.destination,
     required this.terminal,
+    required this.tiles,
   });
 
   final AppState appState;
   final Destination destination;
   final Terminal? terminal;
+  final ValueNotifier<TileSource> tiles;
 
   @override
   Widget build(BuildContext context) {
@@ -631,10 +790,7 @@ class _MiniMap extends StatelessWidget {
         FlutterMap(
           options: options,
           children: [
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'ph.sagay.sagay_tourist_navigator',
-        ),
+        MapTileLayer(tiles: tiles),
         if (userPoint != null)
           PolylineLayer(
             polylines: [

@@ -136,15 +136,21 @@ class TripEstimator @Inject constructor() {
         destinationZone: String?,
         discounted: Boolean,
     ): FareScope {
+        // The published matrix prices motorized tricycles only. A bus keeps
+        // its road distance and time, but its fare is not published and must
+        // never be silently priced from the tricycle matrix.
+        if (!requiresBoat && vehicle == VehicleType.BUS) {
+            return FareScope.Bus
+        }
         // An island trip is a tricycle ride to the port plus a boat leg, so
         // the land leg is priced like any other tricycle ride.
-        val landVehicle = if (requiresBoat) VehicleType.TRICYCLE else vehicle
-        if (landVehicle == null) {
-            return FareScope.Unverified
+        val landVehicle = if (requiresBoat) {
+            VehicleType.TRICYCLE
+        } else {
+            vehicle ?: return FareScope.Unverified
         }
 
         val tricycle = tricycleFare(
-            vehicle = landVehicle,
             origin = origin,
             matrixEntry = matrixEntry,
             fareRule = fareRule,
@@ -163,7 +169,6 @@ class TripEstimator @Inject constructor() {
      * distance estimate keeps its single value.
      */
     private fun tricycleFare(
-        vehicle: VehicleType,
         origin: FareOrigin?,
         matrixEntry: FareMatrixEntry?,
         fareRule: FareRule,
@@ -171,16 +176,11 @@ class TripEstimator @Inject constructor() {
         destinationZone: String?,
         discounted: Boolean,
     ): FareScope.MotorizedTricycle {
-        val qualifier = if (vehicle == VehicleType.TRICYCLE) {
-            ""
-        } else {
-            " (zone fare; ${vehicle.displayName.lowercase()} fare not published)"
-        }
         if (matrixEntry != null) {
             return FareScope.MotorizedTricycle(
                 amount = if (discounted) matrixEntry.discountedFare else matrixEntry.regularFare,
                 isOfficial = true,
-                basis = "Official fare matrix: ${origin?.name} \u2192 $destinationZone$qualifier",
+                basis = "Official fare matrix: ${origin?.name} \u2192 $destinationZone",
             )
         }
         val estimate = FareCalculator.compute(fareRule, roadKm)

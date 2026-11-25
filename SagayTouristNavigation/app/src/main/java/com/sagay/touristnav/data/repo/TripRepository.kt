@@ -74,7 +74,7 @@ class TripRepository @Inject constructor(
                 baseKm = 3.0,
                 extraPerKm = 2.0,
                 source = "fallback",
-                maxFare = 20.0,
+                maxFare = 40.0,
             )
 
     /**

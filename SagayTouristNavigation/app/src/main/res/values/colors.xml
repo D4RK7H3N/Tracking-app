@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="splash_background">#F4511E</color>
+    <!-- Deep Ocean & Sunrise identity (mirrors ui/Theme.kt). -->
+    <color name="deep_ocean">#0B3C5D</color>
+    <color name="deep_ocean_dark">#072A42</color>
+    <color name="coral">#FF6B52</color>
+    <color name="sunrise_gold">#FFB347</color>
+    <color name="warm_mist">#F7F9F8</color>
+    <color name="ink">#12212B</color>
+    <color name="secondary_teal">#1B7A78</color>
+
+    <!-- System splash: white pin on deep ocean. -->
+    <color name="splash_background">#0B3C5D</color>
 </resources>

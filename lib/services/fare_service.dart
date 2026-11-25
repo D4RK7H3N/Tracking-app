@@ -2,6 +2,7 @@ import '../models/app_data.dart';
 import '../models/destination.dart';
 import '../models/fare_origin.dart';
 import '../models/fare_rule.dart';
+import '../models/fare_scope.dart';
 
 class FareService {
   const FareService();
@@ -11,6 +12,76 @@ class FareService {
     required Destination destination,
     required double roadKm,
     required bool discounted,
+    double? originLat,
+    double? originLng,
+    String? originZone,
+  }) {
+    final resolved = _resolve(
+      data: data,
+      destination: destination,
+      originLat: originLat,
+      originLng: originLng,
+      originZone: originZone,
+    );
+    return _price(
+      data: data,
+      resolved: resolved,
+      roadKm: roadKm,
+      discounted: discounted,
+    );
+  }
+
+  /// Prices the trip and explains what the amount covers, scoped to the
+  /// vehicle that carries it. The fare math is identical to [estimate]; only
+  /// the interpretation of the amount changes (bus/unverified show no fare,
+  /// island fares price the tricycle leg to the port).
+  FareQuote quote({
+    required AppData data,
+    required Destination destination,
+    required double roadKm,
+    required bool discounted,
+    double? originLat,
+    double? originLng,
+    String? originZone,
+  }) {
+    final resolved = _resolve(
+      data: data,
+      destination: destination,
+      originLat: originLat,
+      originLng: originLng,
+      originZone: originZone,
+    );
+    final route = data.routeForDestination(destination);
+    FareEstimate price(bool withDiscount) => _price(
+          data: data,
+          resolved: resolved,
+          roadKm: roadKm,
+          discounted: withDiscount,
+        );
+    FareScope scopeFor(FareEstimate estimate) => scopeForFare(
+          estimate: estimate,
+          vehicle: route?.vehicle,
+          requiresBoat: destination.boat,
+        );
+
+    // The published 20% discount exists only for an official matrix fare.
+    // Work out the regular price first so the scope is known before deciding
+    // whether a discounted price may be offered at all.
+    final regular = price(false);
+    final regularScope = scopeFor(regular);
+    if (!discounted || !regularScope.canDiscount) {
+      return FareQuote(estimate: regular, scope: regularScope);
+    }
+    final discountedEstimate = price(true);
+    return FareQuote(
+      estimate: discountedEstimate,
+      scope: scopeFor(discountedEstimate),
+    );
+  }
+
+  _ResolvedFare _resolve({
+    required AppData data,
+    required Destination destination,
     double? originLat,
     double? originLng,
     String? originZone,
@@ -28,16 +99,28 @@ class FareService {
     }
     final zone = origin?.zone ?? originZone ?? '';
     final journey = data.journeyFor(zone, destination);
-    return estimateFare(
-      rule: data.fareRule,
-      lookup: data.matrixLookup,
-      originZone: zone,
+    return _ResolvedFare(
+      zone: zone,
       destinationZone: journey.fareZone ?? destination.zone,
-      roadKm: roadKm,
-      discounted: discounted,
       originName: origin?.name,
     );
   }
+
+  FareEstimate _price({
+    required AppData data,
+    required _ResolvedFare resolved,
+    required double roadKm,
+    required bool discounted,
+  }) =>
+      estimateFare(
+        rule: data.fareRule,
+        lookup: data.matrixLookup,
+        originZone: resolved.zone,
+        destinationZone: resolved.destinationZone,
+        roadKm: roadKm,
+        discounted: discounted,
+        originName: resolved.originName,
+      );
 
   String formatFare(double amount) {
     if (amount == amount.roundToDouble()) {
@@ -79,4 +162,16 @@ class FareService {
     }
     return '"${value.replaceAll('"', '""')}"';
   }
+}
+
+class _ResolvedFare {
+  const _ResolvedFare({
+    required this.zone,
+    required this.destinationZone,
+    required this.originName,
+  });
+
+  final String zone;
+  final String destinationZone;
+  final String? originName;
 }

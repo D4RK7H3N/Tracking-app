@@ -1,6 +1,21 @@
 # Release Notes — Sagay Tourist Navigation
 
-## v1.0.0 (versionCode 1) — 2026-11-11
+## v1.1.0 (versionCode 2) — current
+
+The current native Android version. Adds trip history and favourites (Room
+schema **v9**: migration 8→9 creates the new `trip_record` and `favorite`
+tables), journey guidance, offline map packs, and fare tools (group fares,
+sharing, CSV export). See the root [README](../README.md) for the full current
+feature list.
+
+> **Superseded — fare cap:** v1.0.0 clamped distance-estimate fares at ₱20.
+> The cap is now **₱40** (₱15 first 3 km, +₱2 per started km, max ₱40),
+> matching the published Resolution No. 2026-117 matrix ceiling
+> (`fare_rule.maxFare = 40`). The ₱20 Old Sagay → Sagay City corridor fare is a
+> separate, still-current published matrix fare and is unaffected. The ₱20
+> references in the v1.0.0 notes below are kept only as history.
+
+## v1.0.0 (versionCode 1) — 2026-11-11 (historical)
 
 First branded build of the native Android app: a calm-teal tourist navigator for
 Sagay City that routes visitors from their location to the correct jeepney
@@ -18,7 +33,8 @@ terminal (and boat port for islands), with distance, duration, and fare estimate
 - **21 school destinations** added (38 destinations total), sourced from
   OSM/Overpass and the DepEd Division of Sagay City directory.
 - **Fare cap** — fares are clamped to a ₱20 ceiling (₱15 first 3 km, +₱2 per
-  started km beyond, max ₱20).
+  started km beyond, max ₱20). *(Superseded in v1.1.0: the cap was raised to
+  ₱40.)*
 
 ### Bug Fixes
 
@@ -43,7 +59,8 @@ terminal (and boat port for islands), with distance, duration, and fare estimate
 ### Improvements
 
 - APK output named `Sagay-Tourist-Navigator` instead of the generic `app-debug`.
-- Fare basis line now shows the ₱20 maximum.
+- Fare basis line now shows the ₱20 maximum. *(Superseded in v1.1.0: it shows
+  the ₱40 maximum.)*
 - Expanded unit tests: fare cap boundaries, school destinations, and boat flags.
 
 ### Notes & Known Limitations

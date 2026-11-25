@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -22,6 +23,8 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.sagay.touristnav.ui.LaunchScreen
 import com.sagay.touristnav.ui.MapScreen
 import com.sagay.touristnav.ui.Motion
+import com.sagay.touristnav.ui.OnboardingPrefs
+import com.sagay.touristnav.ui.OnboardingScreen
 import com.sagay.touristnav.ui.SagayTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -35,10 +38,21 @@ class MainActivity : ComponentActivity() {
         setContent {
             SagayTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
+                    val context = remember { this@MainActivity }
+                    var onboardingDone by rememberSaveable {
+                        mutableStateOf(OnboardingPrefs.isSeen(context))
+                    }
                     var launchDone by rememberSaveable { mutableStateOf(false) }
+
+                    // 0 = first-run tour, 1 = branded launch, 2 = map.
+                    val stage = when {
+                        !onboardingDone -> 0
+                        !launchDone -> 1
+                        else -> 2
+                    }
                     val pageDuration = Motion.duration(Motion.PAGE_MS)
                     AnimatedContent(
-                        targetState = launchDone,
+                        targetState = stage,
                         transitionSpec = {
                             val duration = pageDuration
                             (
@@ -55,12 +69,17 @@ class MainActivity : ComponentActivity() {
                                     )
                                 )
                         },
-                        label = "launch-to-map",
-                    ) { done ->
-                        if (done) {
-                            MapScreen()
-                        } else {
-                            LaunchScreen(onDone = { launchDone = true })
+                        label = "entry-flow",
+                    ) { current ->
+                        when (current) {
+                            0 -> OnboardingScreen(
+                                onFinish = {
+                                    OnboardingPrefs.markSeen(context)
+                                    onboardingDone = true
+                                },
+                            )
+                            1 -> LaunchScreen(onDone = { launchDone = true })
+                            else -> MapScreen()
                         }
                     }
                 }

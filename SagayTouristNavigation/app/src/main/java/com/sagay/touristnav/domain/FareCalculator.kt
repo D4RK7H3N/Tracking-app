@@ -10,7 +10,7 @@ object FareCalculator {
      * wording is confirmed: the base fare covers the first [FareRule.baseKm],
      * and every started kilometer beyond that adds [FareRule.extraPerKm]
      * (hence ceil). The result is clamped to [FareRule.maxFare] when set
-     * (city rule: fares stay within baseFare..maxFare, currently 15-20).
+     * (city rule: fares stay within baseFare..maxFare, currently 15-40).
      * Change only this function if the resolution says otherwise, and update
      * FareCalculatorTest with it.
      */

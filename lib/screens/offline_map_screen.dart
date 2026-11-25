@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../services/offline_map_pack.dart';
+import '../state/app_state.dart';
 
 class OfflineMapScreen extends StatefulWidget {
   const OfflineMapScreen({super.key});
@@ -17,10 +19,13 @@ class _OfflineMapScreenState extends State<OfflineMapScreen> {
   int _progress = 0;
   bool _downloading = false;
 
-  void _reload() => setState(() {
-        _downloaded = _pack.isDownloaded();
-        _size = _pack.sizeBytes();
-      });
+  void _reload() {
+    if (!mounted) return;
+    setState(() {
+      _downloaded = _pack.isDownloaded();
+      _size = _pack.sizeBytes();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +76,9 @@ class _OfflineMapScreenState extends State<OfflineMapScreen> {
                 if (downloaded)
                   OutlinedButton.icon(
                     onPressed: () async {
+                      final appState = context.read<AppState>();
                       await _pack.delete();
+                      await appState.refreshMapTiles();
                       _reload();
                     },
                     icon: const Icon(Icons.delete_outline),
@@ -82,6 +89,7 @@ class _OfflineMapScreenState extends State<OfflineMapScreen> {
                     onPressed: _downloading
                         ? null
                         : () async {
+                            final appState = context.read<AppState>();
                             setState(() => _downloading = true);
                             await _pack.download((done, total) {
                               if (!mounted) return;
@@ -90,6 +98,9 @@ class _OfflineMapScreenState extends State<OfflineMapScreen> {
                             if (mounted) {
                               setState(() => _downloading = false);
                             }
+                            // Activate the pack for every map immediately,
+                            // without waiting for an app restart.
+                            await appState.refreshMapTiles();
                             _reload();
                           },
                     icon: const Icon(Icons.download),

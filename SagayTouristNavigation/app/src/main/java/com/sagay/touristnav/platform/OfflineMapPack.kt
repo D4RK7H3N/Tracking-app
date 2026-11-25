@@ -12,6 +12,7 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.MapTileIndex
 import org.osmdroid.views.MapView
 import java.io.File
+import java.io.IOException
 import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.pow
@@ -52,22 +53,31 @@ class OfflineMapPack(private val context: Context) {
                         val request = Request.Builder()
                             .url("https://tile.openstreetmap.org/$zoom/$x/$y.png")
                             .build()
-                        client.newCall(request).execute().use { response ->
-                            if (response.isSuccessful) {
-                                response.body?.byteStream()?.use { stream ->
-                                    writer.saveFile(
-                                        TileSourceFactory.MAPNIK,
-                                        MapTileIndex.getTileIndex(zoom, x, y),
-                                        stream,
-                                        null,
-                                    )
+                        try {
+                            client.newCall(request).execute().use { response ->
+                                if (response.isSuccessful) {
+                                    response.body?.byteStream()?.use { stream ->
+                                        writer.saveFile(
+                                            TileSourceFactory.MAPNIK,
+                                            MapTileIndex.getTileIndex(zoom, x, y),
+                                            stream,
+                                            null,
+                                        )
+                                    }
                                 }
                             }
+                        } catch (_: IOException) {
+                            // Skip the tile and keep going; a flaky connection
+                            // should not abort a partially downloaded pack.
                         }
                         done++
                         onProgress(done, total)
                     }
                 }
+            }
+            if (done == 0) {
+                packFile.delete()
+                throw IOException("No map tiles could be downloaded. Check your internet connection.")
             }
         } finally {
             writer.onDetach()

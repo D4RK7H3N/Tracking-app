@@ -208,36 +208,39 @@ fun TripDetailsCard(
             }
             Spacer(Modifier.height(4.dp))
             FareBasisBlock(fare = trip.fare)
-            if (trip.fare.canDiscount) {
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "Passengers",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
-                    )
-                    IconButton(onClick = { onChangePassengers(passengers - 1) }) {
-                        Icon(Icons.Default.Remove, contentDescription = "Fewer passengers")
-                    }
-                    Text(
-                        "$passengers",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    IconButton(onClick = { onChangePassengers(passengers + 1) }) {
-                        Icon(Icons.Default.Add, contentDescription = "More passengers")
-                    }
+            // Group size applies to every trip, including distance estimates
+            // and unverified fares; only the discount is matrix-only.
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Passengers",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = { onChangePassengers(passengers - 1) }) {
+                    Icon(Icons.Default.Remove, contentDescription = "Fewer passengers")
                 }
-                if (passengers > 1) {
-                    Text(
-                        "Group total: " + FareFormat.peso(
-                            TripSummary.total(TripSummary.unitAmount(trip.fare), passengers),
-                        ),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = SagayColors.SunriseDeep,
-                    )
+                Text(
+                    "$passengers",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                IconButton(onClick = { onChangePassengers(passengers + 1) }) {
+                    Icon(Icons.Default.Add, contentDescription = "More passengers")
                 }
+            }
+            val unitFare = TripSummary.unitAmount(trip.fare)
+            if (passengers > 1) {
+                Text(
+                    if (unitFare > 0.0) {
+                        "Group total: " + FareFormat.peso(TripSummary.total(unitFare, passengers))
+                    } else {
+                        "Group total not available (fare not verified)"
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = SagayColors.SunriseDeep,
+                )
             }
             AnimatedVisibility(
                 visible = trip.fare.canDiscount,

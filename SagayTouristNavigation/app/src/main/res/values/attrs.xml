@@ -5,5 +5,5 @@
         ?attr/colorControlNormal. The app theme is android:Theme.Material.Light
         (not AppCompat), so the attribute is declared here with a default.
     -->
-    <attr name="colorControlNormal" format="color">#FF00695C</attr>
+    <attr name="colorControlNormal" format="color">#FF0B3C5D</attr>
 </resources>

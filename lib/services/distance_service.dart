@@ -11,6 +11,7 @@ class DistanceResult {
     required this.km,
     required this.isRoadRoute,
     this.routePoints = const [],
+    this.durationSeconds,
   });
 
   /// Travel distance in kilometres.
@@ -24,6 +25,10 @@ class DistanceResult {
   /// Waypoints of the actual road route (user -> destination), used to draw
   /// the route line on the map. Empty for the offline straight-line fallback.
   final List<LatLng> routePoints;
+
+  /// Travel time in seconds from OSRM. Null when the routing response has no
+  /// duration (callers then hide the travel-time line).
+  final int? durationSeconds;
 }
 
 /// Computes the travel distance between two points.
@@ -65,11 +70,16 @@ class DistanceService {
         km: road.km,
         isRoadRoute: true,
         routePoints: road.points,
+        durationSeconds: road.durationSeconds,
       );
     }
+    final estimatedKm = haversineKm(from, to) * roadFactor;
     return DistanceResult(
-      km: haversineKm(from, to) * roadFactor,
+      km: estimatedKm,
       isRoadRoute: false,
+      // Offline estimate at 20 km/h, matching the native app's fallback so
+      // both platforms show the same rough travel time.
+      durationSeconds: (estimatedKm / 20.0 * 3600).round(),
     );
   }
 
@@ -94,9 +104,9 @@ class DistanceService {
     }
   }
 
-  /// Extracts the distance (metres -> km) and the route geometry
-  /// (`routes[0].geometry.coordinates`, [lng, lat] pairs) from an OSRM
-  /// response body. Returns null when the response is unusable.
+  /// Extracts the distance (metres -> km), travel time (seconds) and the
+  /// route geometry (`routes[0].geometry.coordinates`, [lng, lat] pairs)
+  /// from an OSRM response body. Returns null when the response is unusable.
   _RoadRoute? _parseRoadRoute(String body) {
     try {
       final dynamic data = jsonDecode(body);
@@ -118,6 +128,8 @@ class DistanceService {
       if (metres == null) {
         return null;
       }
+      // OSRM reports duration in seconds; keep it for the travel-time line.
+      final seconds = (first['duration'] as num?)?.toDouble();
 
       final points = <LatLng>[];
       final geometry = first['geometry'];
@@ -131,7 +143,11 @@ class DistanceService {
           }
         }
       }
-      return _RoadRoute(km: metres / 1000.0, points: points);
+      return _RoadRoute(
+        km: metres / 1000.0,
+        points: points,
+        durationSeconds: seconds?.round(),
+      );
     } catch (_) {
       return null;
     }
@@ -169,10 +185,11 @@ class DistanceService {
   static double _degToRad(double degrees) => degrees * math.pi / 180.0;
 }
 
-/// Internal holder for one OSRM route: distance plus its polyline geometry.
+/// Internal holder for one OSRM route: distance, duration and geometry.
 class _RoadRoute {
-  const _RoadRoute({required this.km, required this.points});
+  const _RoadRoute({required this.km, required this.points, this.durationSeconds});
 
   final double km;
   final List<LatLng> points;
+  final int? durationSeconds;
 }

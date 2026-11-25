@@ -9,4 +9,12 @@ double haversineKm(double lat1, double lng1, double lat2, double lng2) {
   return radius * 2 * atan2(sqrt(a), sqrt(1 - a));
 }
 
+/// Sanity check only — never used to change the fare.
+///
+/// A road route should be at least the straight-line distance and at most
+/// three times it. Mirrors the native app's `Haversine.isRoadDistanceSuspicious`.
+bool isRoadDistanceSuspicious(double roadKm, double straightLineKm) =>
+    straightLineKm > 0 &&
+    (roadKm < straightLineKm || roadKm > straightLineKm * 3);
+
 double _radians(double degrees) => degrees * pi / 180;

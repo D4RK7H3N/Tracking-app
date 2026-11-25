@@ -3,6 +3,13 @@
 **Date:** 2026-11-18
 **Status:** Approved for implementation
 
+> **Status update (2026-11-25):** Delivery phases 3–7 (UI motion, trip history
+> + favourites, journey guidance, offline map packs, and fare tools expansion)
+> are **now implemented** in the native app; the code is being finalized by
+> another agent. The current behaviour is summarized in the root
+> [README](../../README.md). Read the phase lists below as the original design,
+> not as outstanding work.
+
 ## Context
 
 The repository contains two implementations of the Sagay Tourist Navigator:
